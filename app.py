@@ -12,7 +12,7 @@ import urllib.parse
 # --- PREMIUM PAGE CONFIG ---
 st.set_page_config(page_title="অস্থির চালান PRO", page_icon="⚡", layout="wide")
 
-# --- CLOUD SAFE DATABASE MECHANISM ---
+# --- CLOUD SAFE DATABASE MECHANISM (DATA RETENTION LOCKED) ---
 USER_DB = "users_db.json"
 CONFIG_FILE = "system_config.json"
 HISTORY_DB = "users_history_memory.json"
@@ -27,6 +27,7 @@ def load_json_file(filename, default_val):
 def save_json_file(filename, data):
     with open(filename, "w") as f: json.dump(data, f, indent=4)
 
+# আগের সেভ করা ডাটা ও এপিআই কি অক্ষত রাখার জন্য ক্যাশ চেকিং লজিক
 if "users_cache" not in st.session_state:
     st.session_state.users_cache = load_json_file(USER_DB, {})
 if "config_cache" not in st.session_state:
@@ -67,6 +68,33 @@ if "logged_in_user" not in st.session_state:
     st.session_state.logged_in_user = None
 if "current_leads" not in st.session_state:
     st.session_state.current_leads = []
+
+# --- SMART EMAIL SCRAPER ENGINE WITH ADVANCED FAKE FILTER ---
+def extract_email_from_website(url):
+    if not url or url == "N/A" or "google.com" in url: return "N/A"
+    try:
+        if not url.startswith("http"): url = "http://" + url
+        res = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        emails = re.findall(r'[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+\.[a-zA-Z0-9.\-_]+', res.text)
+        
+        # ভুয়া, স্যাম্পল এবং ইমেজ ফাইল ফিল্টার করার জন্য কি-ওয়ার্ড লিস্ট
+        invalid_keywords = [
+            'user@domain.com', 'email@domain.com', 'yourname@', 'example@', 
+            'sentry.io', '.png', '.jpg', '.jpeg', '.gif', 'wixpress.com', 
+            'myemail@', 'test@test', 'domain.com'
+        ]
+        valid_emails = []
+        
+        for e in emails:
+            # চেক করা হচ্ছে ইমেইলের ভেতর কোনো ভুয়া শব্দ আছে কিনা
+            if not any(keyword in e.lower() for keyword in invalid_keywords):
+                # একদম নিখুঁত ইমেইল ফরম্যাট ভ্যালিডেশন
+                if re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', e):
+                    valid_emails.append(e)
+                
+        return valid_emails[0] if valid_emails else "N/A"
+    except:
+        return "N/A"
 
 # --- AUTHENTICATION INTERFACE ---
 if st.session_state.logged_in_user is None:
@@ -116,18 +144,6 @@ else:
             st.session_state.logged_in_user = None
             st.session_state.current_leads = []
             st.rerun()
-
-    # --- EMAIL SCRAPER ENGINE ---
-    def extract_email_from_website(url):
-        if not url or url == "N/A" or "google.com" in url: return "N/A"
-        try:
-            if not url.startswith("http"): url = "http://" + url
-            res = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
-            emails = re.findall(r'[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+\.[a-zA-Z0-9.\-_]+', res.text)
-            valid_emails = [e for e in emails if not e.endswith(('.png', '.jpg', '.jpeg', '.gif', 'wixpress.com'))]
-            return valid_emails[0] if valid_emails else "N/A"
-        except:
-            return "N/A"
 
     # --- SERPAPI & SCRAPER CORE ---
     def start_real_serp_hunting(search_query, status_box, table_placeholder, user_id):
@@ -208,16 +224,16 @@ else:
         st.markdown("---")
         st.markdown("<h2>⚡ Smart Auto-Template Sales Station</h2>", unsafe_allow_html=True)
         
-        # ১. প্রোফাইল ও অফার ডাটা ইনপুট বক্স
+        # প্রোফাইল ও অফার ডাটা ইনপুট বক্স
         col_inp1, col_inp2 = st.columns(2)
         with col_inp1:
             my_company = st.text_input("🏢 Your Company/Agency Name:", value="Reyadh Marketing Lab")
             my_role = st.text_input("👑 Your Designation/Role:", value="Founder")
         with col_inp2:
-            my_services = st.text_input("🛠️ Services You Offer:", placeholder="e.g., Lead Generation, SEO, Website Development")
-            target_reason = st.text_input("🎯 Reason / Pain Point to Approach:", placeholder="e.g., missing out on high-paying premium clients from Google Maps")
+            my_services = st.text_input("🛠️ Services You Offer:", placeholder="e.g., Premium Photo & Video Editing Services")
+            target_reason = st.text_input("🎯 Reason / Pain Point to Approach:", placeholder="e.g., spending too many sleepless nights editing thousands of wedding raw photos")
 
-        # ২. এসএমটিপি কানেকশন সুইচার
+        # এসএমটিপি কানেকশন সুইচার
         st.markdown("<h4>📬 Dynamic SMTP Sender Details</h4>", unsafe_allow_html=True)
         col_m1, col_m2 = st.columns(2)
         with col_m1:
@@ -226,9 +242,9 @@ else:
             custom_app_pass = st.text_input("Google App Password:", type="password", placeholder="16-digit secret code")
             
         st.markdown("<br>", unsafe_allow_html=True)
-        campaign_subject = st.text_input("Cold Mail Email Subject:", value="Special Partnership Proposal ⚡")
+        campaign_subject = st.text_input("Cold Mail Email Subject:", value="Quick question regarding your photography post-production 📸")
         
-        # ৩. ব্যাকগ্রাউন্ড টেমপ্লেট মেকার ফাংশন
+        # ব্যাকগ্রাউন্ড টেমপ্লেট মেকার ফাংশন
         def build_dynamic_cold_mail(client_name, company, role, services, reason):
             template = f"Hello {client_name},\n\n" \
                        f"I hope you are doing well. I stumbled upon your business page on Google Maps and was highly impressed by your work!\n\n" \
@@ -256,8 +272,8 @@ else:
                         
                         for lead in st.session_state.current_leads:
                             to_email = lead["Email"]
-                            if to_email != "N/A":
-                                # প্রতি ক্লায়েন্টের জন্য আলাদা একদম ইউনিক বডি জেনারেট হচ্ছে
+                            # ইমেইল ফাঁকা না থাকলে এবং ভুয়া ইমেইল না হলেই কেবল পাঠানো হবে
+                            if to_email != "N/A" and "@" in to_email:
                                 personal_msg = build_dynamic_cold_mail(
                                     client_name=lead["Client Name"],
                                     company=my_company,
@@ -329,4 +345,4 @@ with st.expander("🛠️ Reyadh Bhai's Secret Control Room"):
                     
     elif admin_auth != "": st.error("ভুল পাসওয়ার্ড!")
 
-st.markdown('<div class="footer">Osthir Chalan Engine v10.0 | Handcrafted by <span>MD Reyadh</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">Osthir Chalan Engine v11.0 | Handcrafted by <span>MD Reyadh</span></div>', unsafe_allow_html=True)
