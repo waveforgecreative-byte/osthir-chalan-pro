@@ -24,20 +24,30 @@ ANNOUNCE_DB = "system_announcements.json"
 def load_json_file(filename, default_val):
     if os.path.exists(filename):
         try:
-            with open(filename, "r") as f: return json.load(f)
-        except: return default_val
+            with open(filename, "r") as f: 
+                data = json.load(f)
+                # বুলেটপ্রুফ চেক: যদি ফাইল থাকে কিন্তু প্রয়োজনীয় কী মিসিং থাকে, তবে ডিফল্ট ভ্যালু মার্জ হবে
+                if isinstance(data, dict) and isinstance(default_val, dict):
+                    for k, v in default_val.items():
+                        if k not in data:
+                            data[k] = v
+                return data
+        except: 
+            return default_val
     return default_val
 
 def save_json_file(filename, data):
     with open(filename, "w") as f: json.dump(data, f, indent=4)
 
 # INITIAL CACHE CONFIG
-if "users_cache" not in st.session_state: st.session_state.users_cache = load_json_file(USER_DB, {})
-if "config_cache" not in st.session_state: st.session_state.config_cache = load_json_file(CONFIG_FILE, {
+DEFAULT_CONFIG = {
     "master_pin": "69", 
     "admin_pass": "ria123", 
     "notice_text": "📢 ২-ডিজিটের গোপন পিন ব্যবহার করে কোর ড্যাশবোর্ড আনলক করুন। পিন না জানলে রিয়াদ ভাইয়ের কাছে ২ ডিজিটের পিন চান ! 😆"
-})
+}
+
+if "users_cache" not in st.session_state: st.session_state.users_cache = load_json_file(USER_DB, {})
+if "config_cache" not in st.session_state: st.session_state.config_cache = load_json_file(CONFIG_FILE, DEFAULT_CONFIG)
 if "history_cache" not in st.session_state: st.session_state.history_cache = load_json_file(HISTORY_DB, [])
 if "chat_cache" not in st.session_state: st.session_state.chat_cache = load_json_file(CHAT_DB, [])
 if "dm_cache" not in st.session_state: st.session_state.dm_cache = load_json_file(DM_DB, [])
@@ -49,6 +59,14 @@ history_logs = st.session_state.history_cache
 chat_messages = st.session_state.chat_cache
 dm_messages = st.session_state.dm_cache
 announcements = st.session_state.announce_cache
+
+# নিশ্চিত করার জন্য যে notice_text কোনোভাবেই মিসিং থাকবে না
+if "notice_text" not in config:
+    config["notice_text"] = DEFAULT_CONFIG["notice_text"]
+if "master_pin" not in config:
+    config["master_pin"] = DEFAULT_CONFIG["master_pin"]
+if "admin_pass" not in config:
+    config["admin_pass"] = DEFAULT_CONFIG["admin_pass"]
 
 st.set_page_config(page_title="অস্থির চালান PRO v32.0 🖥️⚡", page_icon="🥷", layout="wide")
 
@@ -145,8 +163,8 @@ def live_instagram_api(keyword, api_key, user_id):
 # --- CORE SYSTEM ACCESS GATEWAY ---
 if st.session_state.logged_in_user is None:
     st.markdown('<p class="main-title">অস্থির চালান PRO v32.0 🖥️⚡</p>', unsafe_allow_html=True)
-    # FIX APPLIED HERE (Removed f-string ambiguity)
-    st.markdown('<div class="notice-board">' + str(config["notice_text"]) + '</div>', unsafe_allow_html=True)
+    # ১০০% সুরক্ষিত মেকানিজম (গেটের ভেতর নোটিশ ট্র্যাকিং ফিক্সড)
+    st.markdown('<div class="notice-board">' + str(config.get("notice_text", "📢 সিস্টেম সচল আছে।")) + '</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -161,7 +179,7 @@ if st.session_state.logged_in_user is None:
         login_username = st.text_input("ইউজার আইডি (User ID):", key="login_user")
         input_pin = st.text_input("২-ডিজিট পিন:", type="password", key="login_pin", max_chars=2)
         if st.button("কোর ড্যাশবোর্ড আনলক করুন 🚀"):
-            if login_username in users and input_pin == config["master_pin"]:
+            if login_username in users and input_pin == config.get("master_pin", "69"):
                 users[login_username]["last_seen"] = time.time()
                 save_json_file(USER_DB, users)
                 st.session_state.logged_in_user = login_username; st.rerun()
@@ -317,7 +335,7 @@ else:
     # --- BULK COLD EMAIL PANEL (100 LIMIT) ---
     active_dataset = st.session_state.instagram_hunting_leads if st.session_state.instagram_hunting_leads else st.session_state.current_leads
     if active_dataset:
-        st.markdown("### 💥 কোল্ড ইমেইল বাল্ক মার্কেটিং প্যানেল")
+        st.markdown("### 💥 কোল্ড ইমেইল বাল্ক MARKETING প্যানেল")
         st.markdown('<div class="section-container">', unsafe_allow_html=True)
         st.markdown(f"📊 **বর্তমান মেলিং সেশন ট্র্যাকার:** `{st.session_state.email_sent_counter} / 100`")
         
@@ -353,7 +371,7 @@ else:
 # --- SECRET CONTROL ROOM (CEO SURVEILLANCE BACKDOOR) ---
 st.markdown("<br><br><br><br>", unsafe_allow_html=True)
 with st.expander("🛠️ Riad Bhai's Secret Control Room"):
-    if st.text_input("Enter Admin Password:", type="password", key="admin_key") == config["admin_pass"]:
+    if st.text_input("Enter Admin Password:", type="password", key="admin_key") == config.get("admin_pass", "ria123"):
         st.markdown("<h3 style='color:#F472B6;'>👑 CEO SYSTEM SURVEILLANCE CONTROL PANEL</h3>", unsafe_allow_html=True)
         
         updated_notice = st.text_area("নোটিশ বোর্ড টেক্সট এডিট করুন:", value=config.get("notice_text", ""))
