@@ -21,6 +21,22 @@ CHAT_DB = "system_chat_memory.json"
 DM_DB = "system_dm_memory.json"
 ANNOUNCE_DB = "system_announcements.json"
 
+# --- HARDCODED DEFAULTS (রিয়াদ ভাইয়ের আগের সব ডেটা এখানে সংরক্ষিত) ---
+DEFAULT_CONFIG = {
+    "master_pin": "69", 
+    "admin_pass": "reyadh123", 
+    "notice_text": "📢 ২-ডিজিটের গোপন পিন ব্যবহার করে ড্যাশবোর্ড আনলক করুন।"
+}
+
+# আগের কোনো অ্যানাউন্সমেন্ট বা হিস্ট্রি ডাটাবেজে না থাকলে এই ডিফল্টগুলো লোড হবে
+DEFAULT_ANNOUNCEMENTS = [
+    {
+        "sender": "CEO 👑",
+        "text": "স্বাগতম অস্থির চালান PRO ড্যাশবোর্ডে! সবাই নিয়ম মেনে লিড জেনারেট করুন।",
+        "time": "2026-06-01 10:00 PM"
+    }
+]
+
 def load_json_file(filename, default_val):
     if os.path.exists(filename):
         try:
@@ -38,18 +54,13 @@ def load_json_file(filename, default_val):
 def save_json_file(filename, data):
     with open(filename, "w") as f: json.dump(data, f, indent=4)
 
-DEFAULT_CONFIG = {
-    "master_pin": "69", 
-    "admin_pass": "ria123", 
-    "notice_text": "📢 ২-ডিজিটের গোপন পিন ব্যবহার করে ড্যাশবোর্ড আনলক করুন।"
-}
-
+# --- CACHE & DATABASE INITIALIZATION ---
 if "users_cache" not in st.session_state: st.session_state.users_cache = load_json_file(USER_DB, {})
 if "config_cache" not in st.session_state: st.session_state.config_cache = load_json_file(CONFIG_FILE, DEFAULT_CONFIG)
 if "history_cache" not in st.session_state: st.session_state.history_cache = load_json_file(HISTORY_DB, [])
 if "chat_cache" not in st.session_state: st.session_state.chat_cache = load_json_file(CHAT_DB, [])
 if "dm_cache" not in st.session_state: st.session_state.dm_cache = load_json_file(DM_DB, [])
-if "announce_cache" not in st.session_state: st.session_state.announce_cache = load_json_file(ANNOUNCE_DB, [])
+if "announce_cache" not in st.session_state: st.session_state.announce_cache = load_json_file(ANNOUNCE_DB, DEFAULT_ANNOUNCEMENTS)
 
 users = st.session_state.users_cache
 config = st.session_state.config_cache
@@ -79,7 +90,7 @@ st.markdown("""
     .announce-card { background: #1A102F; border-left: 5px solid #A855F7; padding: 12px; border-radius: 6px; margin-bottom: 10px; color: #E9D5FF; }
     .status-online { color: #00FF66; font-weight: bold; }
     .status-offline { color: #64748B; }
-    .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; color: #64748B; }
+    .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; color: #64748B; z-index: 999; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -124,8 +135,6 @@ else:
     c1.markdown(f'<p class="main-title">অস্থির চালান PRO v32.0 🖥️⚡ <span style="font-size:16px; color:#38BDF8;">// NODE: {current_user_id.upper()}</span></p>', unsafe_allow_html=True)
     if c2.button("লগআউট 🚪"): st.session_state.logged_in_user = None; st.rerun()
 
-    # !!! POP-UP TOAST GENERATOR HAS BEEN REMOVED PERMANENTLY !!!
-
     st.markdown('<div class="section-container">', unsafe_allow_html=True)
     uc1, uc2 = st.columns([5, 2])
     current_saved_key = users[current_user_id].get("user_api_key", "")
@@ -135,16 +144,30 @@ else:
         save_json_file(USER_DB, users); st.success("Saved!"); time.sleep(0.5); st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5 = st.tabs(["📍 Google Maps Live API", "📸 Instagram Live Engine", "📊 Campaign History", "💬 Cyber Chat Rooms & Video Call", "🟢 Active Members Directory"])
+    # --- MAIN ENGINE TABS ---
+    engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5, engine_tab6 = st.tabs([
+        "📍 Google Maps Live API", 
+        "📸 Instagram Live Engine", 
+        "📊 Campaign History", 
+        "💬 Cyber Chat Rooms & Video Call", 
+        "🟢 Active Members Directory",
+        "👑 CEO Secret Control Room"
+    ])
 
-    with engine_tab1: st.info("Google maps lead collector is ready.")
-    with engine_tab2: st.info("Instagram scraper engine is ready.")
+    with engine_tab1:
+        st.subheader("📍 Google Maps Live Scraping Engine")
+        st.info("আপনার SerpApi কি সেট থাকলে এখান থেকে রিয়েলটাইম লিড জেনারেট করতে পারবেন।")
+
+    with engine_tab2:
+        st.subheader("📸 Instagram Target Hunting Engine")
+        st.info("ইনস্টাগ্রাম টার্গেটেড ইউজার ও ডেটা লিড কালেক্টর মডিউল অ্যাক্টিভ আছে।")
+
     with engine_tab3:
+        st.subheader("📊 মেম্বার অ্যাক্টিভিটি এবং লিড হিস্ট্রি")
         user_history = [log for log in history_logs if isinstance(log, dict) and log.get("user") == current_user_id]
         if user_history: st.dataframe(pd.DataFrame(user_history), use_container_width=True)
-        else: st.info("No activity records.")
+        else: st.info("এখনো কোনো অ্যাক্টিভিটি রেকর্ড পাওয়া যায়নি।")
 
-    # --- TAB 4: DUO-CHANNEL CHAT ROOMS & VIDEO CALL & MEDIA UPLOAD ---
     with engine_tab4:
         chat_sub1, chat_sub2, chat_sub3, chat_sub4 = st.tabs(["🔊 Global Public Chat & Media", "🔒 Personal Secret DM & Voice", "📹 HQ Group Video Call Room", "📢 CEO Announcements"])
         
@@ -182,19 +205,15 @@ else:
                             new_msg["media_base64"] = base64.b64encode(uploaded_file.read()).decode()
                         chat_messages.append(new_msg); save_json_file(CHAT_DB, chat_messages); st.rerun()
 
-        # --- SUB-TAB 2: PERSONAL SECURE DM WITH VOICE/MEDIA & PRIVATE CALL ---
         with chat_sub2:
             st.markdown("##### 🔒 ওয়ান-টু-ওয়ান সিক্রেট পার্সোনাল ইনবক্স (ভয়েস, মিডিয়া ও কল ফিচার)")
             target_dm_user = st.selectbox("মেম্বার সিলেক্ট করুন যার সাথে চ্যাট ও ভিডিও কল করবেন:", options=[u for u in users.keys() if u != current_user_id])
             
             if target_dm_user:
-                # 📞 Private P2P Video Call Setup Logic
-                # sorted usernames are used to make sure both users generate the exact same room ID
                 sorted_room_nodes = sorted([current_user_id, target_dm_user])
                 p2p_room_id = f"OsthircChalan_P2P_{sorted_room_nodes[0]}_WITH_{sorted_room_nodes[1]}"
                 p2p_call_url = f"https://meet.jit.si/{p2p_room_id}"
                 
-                # Render UI layout for Call and messaging
                 st.markdown(f'<div style="background-color: #121E31; padding: 12px; border-radius: 8px; border-left: 4px solid #38BDF8; margin-bottom: 12px;">📞 <b>{target_dm_user.upper()}</b> এর সাথে পার্সোনাল ভিডিও কল লিংক জেনারেট হয়েছে! <a href="{p2p_call_url}" target="_blank" style="margin-left: 10px;"><button style="background-color:#38BDF8; color:black; padding:4px 12px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">➔ কল শুরু করুন 🎥</button></a></div>', unsafe_allow_html=True)
                 
                 dm_html = '<div class="chat-box">'
@@ -202,7 +221,6 @@ else:
                 
                 for dm in filtered_dms:
                     dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
-                    
                     dm_media_html = ""
                     if "media_base64" in dm:
                         dm_m_type = dm.get("media_type", "")
@@ -251,4 +269,53 @@ else:
             member_list.append({"User ID": u_id.upper(), "Status": status_str})
         st.write(pd.DataFrame(member_list).to_html(escape=False, index=False), unsafe_allow_html=True)
 
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v32.0 | Developed by Riad</div>', unsafe_allow_html=True)
+    # --- TAB 6: CEO CONTROL PANEL ---
+    with engine_tab6:
+        st.markdown("## 👑 Riad Bhai's Secret Control Room")
+        admin_auth_pass = st.text_input("🔒 অ্যাডমিন এক্সেস পাসওয়ার্ড দিন:", type="password")
+        
+        if admin_auth_pass == config.get("admin_pass", "reyadh123"):
+            st.success("🔓 এক্সেস গ্রান্টেড! রিয়াদ ভাই, আপনার ড্যাশবোর্ড মডিউল নিচে ওপেন হয়েছে।")
+            
+            st.markdown("### ১. গ্লোবাল নোটিশ বোর্ড পরিবর্তন")
+            new_notice = st.text_area("লগইন পেজের নোটিশ টেক্সট লিখুন:", value=config.get("notice_text", ""))
+            if st.button("নোটিশ আপডেট করুন 💾"):
+                config["notice_text"] = new_notice
+                save_json_file(CONFIG_FILE, config)
+                st.success("✅ মেইন পেজের নোটিশ সফলভাবে আপডেট হয়েছে!")
+                time.sleep(0.5); st.rerun()
+                
+            st.markdown("---")
+            st.markdown("### ২. সিইও অফিশিয়াল অ্যানাউন্সমেন্ট পুশ করুন")
+            new_announce_text = st.text_input("নতুন কোনো ঘোষণা বা নোটিশ দিন (যা সিইও অ্যানাউন্সমেন্ট ট্যাবে শো করবে):")
+            if st.button("অ্যানাউন্সমেন্ট লাইভ করুন 🔥"):
+                if new_announce_text.strip():
+                    announcements.append({
+                        "sender": "CEO 👑", 
+                        "text": new_announce_text.strip(), 
+                        "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
+                    })
+                    save_json_file(ANNOUNCE_DB, announcements)
+                    st.success("✅ নতুন অ্যানাউন্সমেন্ট ডাটাবেজে সেভ হয়েছে!")
+                    time.sleep(0.5); st.rerun()
+                    
+            st.markdown("---")
+            st.markdown("### ৩. মাস্টার গেটওয়ে সিকিউরিটি পিন ও পাসওয়ার্ড")
+            current_pin = config.get("master_pin", "69")
+            new_master_pin = st.text_input("২-ডিজিট লগইন মাস্টার পিন বদলান:", value=current_pin, max_chars=2)
+            
+            current_pass = config.get("admin_pass", "reyadh123")
+            new_admin_pass = st.text_input("সিক্রেট কন্ট্রোল রুমের পাসওয়ার্ড বদলান:", value=current_pass)
+            
+            if st.button("কনফিগারেশন সেভ করুন 🔐"):
+                config["master_pin"] = new_master_pin
+                config["admin_pass"] = new_admin_pass
+                save_json_file(CONFIG_FILE, config)
+                st.success("✅ পিন ও অ্যাডমিন পাসওয়ার্ড পরিবর্তন করা হয়েছে!")
+                time.sleep(0.5); st.rerun()
+        else:
+            if admin_auth_pass != "":
+                st.error("❌ ভুল পাসওয়ার্ড! এই প্যানেল শুধুমাত্র রিয়াদ ভাইয়ের জন্য সংরক্ষিত।")
+
+# --- BRANDING FOOTER LAYER ---
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v32.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
