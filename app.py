@@ -145,7 +145,8 @@ def live_instagram_api(keyword, api_key, user_id):
 # --- CORE SYSTEM ACCESS GATEWAY ---
 if st.session_state.logged_in_user is None:
     st.markdown('<p class="main-title">অস্থির চালান PRO v32.0 🖥️⚡</p>', unsafe_allow_html=True)
-    st.markdown(f'<div class="notice-board">{config["notice_text"]}</div>', unsafe_allow_html=True)
+    # FIX APPLIED HERE (Removed f-string ambiguity)
+    st.markdown('<div class="notice-board">' + str(config["notice_text"]) + '</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -226,7 +227,7 @@ else:
             st.markdown(f'<div class="alert-card">⚠️ সিকিউরিটি লক! আর {int(300-elapsed)} সেকেন্ড পর বাটন রিলিজ হবে।</div>', unsafe_allow_html=True)
         else:
             ig_keyword = st.text_input("টার্গেট নিশ/কীওয়ার্ড লিখুন:")
-            if st.button("ইনস্টাগ্রাম এপিআই রান করুন 🔥", key="ig_api_btn"):
+            if st.button("ইনস্টাগ্রাম এপিআই run করুন 🔥", key="ig_api_btn"):
                 if ig_keyword:
                     st.session_state[last_scrap_key] = time.time()
                     ig_leads = live_instagram_api(ig_keyword, users[current_user_id]["user_api_key"], current_user_id)
