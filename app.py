@@ -26,7 +26,12 @@ def load_json_file(filename, default_val):
         try:
             with open(filename, "r") as f: 
                 data = json.load(f)
-                # বুলেটপ্রুফ চেক: যদি ফাইল থাকে কিন্তু প্রয়োজনীয় কী মিসিং থাকে, তবে ডিফল্ট ভ্যালু মার্জ হবে
+                # বুলেটপ্রুফ টাইপ চেকিং
+                if isinstance(default_val, dict) and not isinstance(data, dict):
+                    return default_val
+                if isinstance(default_val, list) and not isinstance(data, list):
+                    return default_val
+                
                 if isinstance(data, dict) and isinstance(default_val, dict):
                     for k, v in default_val.items():
                         if k not in data:
@@ -60,13 +65,15 @@ chat_messages = st.session_state.chat_cache
 dm_messages = st.session_state.dm_cache
 announcements = st.session_state.announce_cache
 
-# নিশ্চিত করার জন্য যে notice_text কোনোভাবেই মিসিং থাকবে না
-if "notice_text" not in config:
-    config["notice_text"] = DEFAULT_CONFIG["notice_text"]
-if "master_pin" not in config:
-    config["master_pin"] = DEFAULT_CONFIG["master_pin"]
-if "admin_pass" not in config:
-    config["admin_pass"] = DEFAULT_CONFIG["admin_pass"]
+# ডাটাবেজ ইন্টিগ্রিটি রি-রেনফোর্সমেন্ট
+if not isinstance(history_logs, list): history_logs = []
+if not isinstance(chat_messages, list): chat_messages = []
+if not isinstance(dm_messages, list): dm_messages = []
+if not isinstance(announcements, list): announcements = []
+
+if "notice_text" not in config: config["notice_text"] = DEFAULT_CONFIG["notice_text"]
+if "master_pin" not in config: config["master_pin"] = DEFAULT_CONFIG["master_pin"]
+if "admin_pass" not in config: config["admin_pass"] = DEFAULT_CONFIG["admin_pass"]
 
 st.set_page_config(page_title="অস্থির চালান PRO v32.0 🖥️⚡", page_icon="🥷", layout="wide")
 
@@ -105,7 +112,7 @@ def to_excel(df):
 
 # --- SERPAPI LIVE ENGINES ---
 def live_google_maps_api(query, api_key, user_id):
-    scraped_before = set([log.get("identifier") for log in history_logs if log.get("user") == user_id and log.get("type") == "Google Maps"])
+    scraped_before = set([log.get("identifier") for log in history_logs if isinstance(log, dict) and log.get("user") == user_id and log.get("type") == "Google Maps"])
     url = "https://serpapi.com/search.json"
     params = {"engine": "google_maps", "q": query, "type": "search", "api_key": api_key}
     try:
@@ -134,7 +141,7 @@ def live_google_maps_api(query, api_key, user_id):
     except: return []
 
 def live_instagram_api(keyword, api_key, user_id):
-    scraped_before = set([log.get("identifier") for log in history_logs if log.get("user") == user_id and log.get("type") == "Instagram Hunter"])
+    scraped_before = set([log.get("identifier") for log in history_logs if isinstance(log, dict) and log.get("user") == user_id and log.get("type") == "Instagram Hunter"])
     url = "https://serpapi.com/search.json"
     params = {"engine": "google", "q": f'site:instagram.com "{keyword}" "biography"', "api_key": api_key}
     try:
@@ -163,7 +170,6 @@ def live_instagram_api(keyword, api_key, user_id):
 # --- CORE SYSTEM ACCESS GATEWAY ---
 if st.session_state.logged_in_user is None:
     st.markdown('<p class="main-title">অস্থির চালান PRO v32.0 🖥️⚡</p>', unsafe_allow_html=True)
-    # ১০০% সুরক্ষিত মেকানিজম (গেটের ভেতর নোটিশ ট্র্যাকিং ফিক্সড)
     st.markdown('<div class="notice-board">' + str(config.get("notice_text", "📢 সিস্টেম সচল আছে।")) + '</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -262,7 +268,7 @@ else:
     # --- TAB 3: CAMPAIGN HISTORY ---
     with engine_tab3:
         st.markdown("<h4>📋 অল-টাইম অ্যাকাউন্ট অ্যাক্টিভিটি হিস্টোরি (ডুপ্লিকেট প্রটেকশন লক)</h4>", unsafe_allow_html=True)
-        user_history = [log for log in history_logs if log.get("user") == current_user_id]
+        user_history = [log for log in history_logs if isinstance(log, dict) and log.get("user") == current_user_id]
         if user_history: st.dataframe(pd.DataFrame(user_history)[["date", "time", "keyword", "type", "identifier"]].rename(columns={"identifier": "Unique Target Link"}), use_container_width=True)
         else: st.info("কোনো ডাটা মেমোরি রেকর্ড হয়নি।")
 
@@ -273,8 +279,9 @@ else:
         with chat_sub1:
             chat_html = '<div class="chat-box">'
             for msg in chat_messages:
-                if msg["sender"] == "CEO 👑": msg_class = "msg-ceo"
-                else: msg_class = "msg-outgoing" if msg["sender"] == current_user_id else "msg-incoming"
+                if not isinstance(msg, dict): continue
+                if msg.get("sender") == "CEO 👑": msg_class = "msg-ceo"
+                else: msg_class = "msg-outgoing" if msg.get("sender") == current_user_id else "msg-incoming"
                 
                 media_html = ""
                 if "media_base64" in msg:
@@ -282,7 +289,7 @@ else:
                     elif msg["media_type"].startswith("audio"): media_html = f'<br><audio controls src="data:{msg["media_type"]};base64,{msg["media_base64"]}" style="margin-top:5px; height: 32px;"></audio>'
                     else: media_html = f'<br><a href="data:{msg["media_type"]};base64,{msg["media_base64"]}" download="{msg["media_name"]}" style="color:#00FF66; font-size:12px;">📁 ফাইল: {msg["media_name"]}</a>'
                 
-                chat_html += f'<div class="{msg_class}"><b>{msg["sender"].upper()}:</b> {msg["text"]}{media_html}<br><small style="font-size:9px;opacity:0.6;">{msg["time"]}</small></div>'
+                chat_html += f'<div class="{msg_class}"><b>{str(msg.get("sender", "Unknown")).upper()}:</b> {msg.get("text", "")}{media_html}<br><small style="font-size:9px;opacity:0.6;">{msg.get("time", "")}</small></div>'
             st.markdown(chat_html + '</div>', unsafe_allow_html=True)
             
             with st.form("global_chat_form", clear_on_submit=True):
@@ -302,10 +309,10 @@ else:
             
             if target_dm_user:
                 dm_html = '<div class="chat-box">'
-                filtered_dms = [d for d in dm_messages if (d["sender"] == current_user_id and d["receiver"] == target_dm_user) or (d["sender"] == target_dm_user and d["receiver"] == current_user_id)]
+                filtered_dms = [d for d in dm_messages if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == target_dm_user) or (d.get("sender") == target_dm_user and d.get("receiver") == current_user_id))]
                 for dm in filtered_dms:
-                    dm_class = "msg-outgoing" if dm["sender"] == current_user_id else "msg-incoming"
-                    dm_html += f'<div class="{dm_class}"><b>{dm["sender"].upper()}:</b> {dm["text"]}<br><small style="font-size:9px;opacity:0.6;">{dm["time"]}</small></div>'
+                    dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
+                    dm_html += f'<div class="{dm_class}"><b>{str(dm.get("sender", "")).upper()}:</b> {dm.get("text", "")}<br><small style="font-size:9px;opacity:0.6;">{dm.get("time", "")}</small></div>'
                 st.markdown(dm_html + '</div>', unsafe_allow_html=True)
                 
                 with st.form("dm_chat_form", clear_on_submit=True):
@@ -318,7 +325,8 @@ else:
         with chat_sub3:
             if announcements:
                 for ann in reversed(announcements):
-                    st.markdown(f'<div class="announce-card"><span style="color:#F472B6; font-weight:bold;">👑 {ann["sender"]}</span><span style="color:#64748B; font-size:11px; float:right;">{ann["time"]}</span><p style="margin-top:5px; margin-bottom:0; font-size:14px; color:#F3E8FF;">{ann["text"]}</p></div>', unsafe_allow_html=True)
+                    if isinstance(ann, dict):
+                        st.markdown(f'<div class="announce-card"><span style="color:#F472B6; font-weight:bold;">👑 {ann.get("sender", "")}</span><span style="color:#64748B; font-size:11px; float:right;">{ann.get("time", "")}</span><p style="margin-top:5px; margin-bottom:0; font-size:14px; color:#F3E8FF;">{ann.get("text", "")}</p></div>', unsafe_allow_html=True)
             else: st.info("এখনো কোনো অফিশিয়াল ঘোষণা দেওয়া হয়নি।")
 
     # --- TAB 5: ACTIVE MEMBERS TRACKER ---
@@ -326,11 +334,12 @@ else:
         st.markdown("<h4>🟢 লাইভ মেম্বার ডিরেক্টরি ও লাস্ট সিন ট্র্যাকার</h4>", unsafe_allow_html=True)
         member_list = []
         for u_id, u_data in users.items():
+            if not isinstance(u_data, dict): continue
             l_seen = u_data.get("last_seen", 0)
             is_online = (time.time() - l_seen) < 40
             status_str = '<span class="status-online">🟢 Online</span>' if is_online else f'<span class="status-offline">⏳ Last Active: {datetime.datetime.fromtimestamp(l_seen).strftime("%I:%M:%S %p")}</span>'
             member_list.append({"User Node ID": u_id.upper(), "Account Status": u_data.get("status", "Active"), "Activity Status": status_str})
-        st.write(pd.DataFrame(member_list).to_html(escape=False, index=False), unsafe_allow_html=True)
+        if member_list: st.write(pd.DataFrame(member_list).to_html(escape=False, index=False), unsafe_allow_html=True)
 
     # --- BULK COLD EMAIL PANEL (100 LIMIT) ---
     active_dataset = st.session_state.instagram_hunting_leads if st.session_state.instagram_hunting_leads else st.session_state.current_leads
@@ -402,7 +411,7 @@ with st.expander("🛠️ Riad Bhai's Secret Control Room"):
         
         if spy_target_user:
             st.info(f"Target node '{spy_target_user.upper()}' এর সমস্ত ওয়ান-টু-ওয়ান আদান-প্রদান করা ইনবক্স হিস্টোরি দেখা হচ্ছে:")
-            spy_dms = [d for d in dm_messages if d["sender"] == spy_target_user or d["receiver"] == spy_target_user]
+            spy_dms = [d for d in dm_messages if isinstance(d, dict) and (d.get("sender") == spy_target_user or d.get("receiver") == spy_target_user)]
             if spy_dms:
                 spy_df = pd.DataFrame(spy_dms)[["time", "sender", "receiver", "text"]].rename(columns={"sender": "From", "receiver": "To", "text": "Message Text"})
                 st.dataframe(spy_df, use_container_width=True)
