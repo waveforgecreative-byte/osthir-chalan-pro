@@ -5,9 +5,11 @@ import requests
 import pandas as pd
 import re
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 
 # --- PREMIUM PAGE CONFIG ---
 st.set_page_config(page_title="অস্থির চালান PRO", page_icon="⚡", layout="wide")
@@ -27,11 +29,16 @@ def load_json_file(filename, default_val):
 def save_json_file(filename, data):
     with open(filename, "w") as f: json.dump(data, f, indent=4)
 
-# আগের সেভ করা ডাটা ও এপিআই কি অক্ষত রাখার জন্য ক্যাশ চেকিং লজিক
 if "users_cache" not in st.session_state:
     st.session_state.users_cache = load_json_file(USER_DB, {})
 if "config_cache" not in st.session_state:
-    st.session_state.config_cache = load_json_file(CONFIG_FILE, {"master_pin": "69", "admin_pass": "reyadh123", "serp_api_key": ""})
+    st.session_state.config_cache = load_json_file(CONFIG_FILE, {
+        "master_pin": "69", 
+        "admin_pass": "reyadh123",
+        "abstract_keys": [],
+        "tomba_keys": [],
+        "hunter_keys": []
+    })
 if "history_cache" not in st.session_state:
     st.session_state.history_cache = load_json_file(HISTORY_DB, {})
 
@@ -39,310 +46,354 @@ users = st.session_state.users_cache
 config = st.session_state.config_cache
 history = st.session_state.history_cache
 
-# --- PREMIUM CYBERBLUE CSS ---
+# --- DESIGN UPGRADE: NEXT-GEN NEON EMERALD (V17.0) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght=500;700&family=Plus+Jakarta+Sans:wght=400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght=500;600;700&family=Plus+Jakarta+Sans:wght=400;500;600;700;800&display=swap');
+    
+    /* Global Reset & Futuristic Background */
     html, body, [class*="css"], .stApp {
         font-family: 'Plus Jakarta Sans', sans-serif !important;
-        background-color: #0A0F1D; color: #F1F5F9;
+        background-color: #060913 !important; 
+        color: #E2E8F0 !important;
     }
-    .main-title { font-family: 'Hind Siliguri', sans-serif !important; font-size: 50px !important; font-weight: 800 !important; background: linear-gradient(135deg, #38BDF8 0%, #1D4ED8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0px; }
-    .sub-title { color: #64748B; font-size: 15px; margin-bottom: 30px; }
-    .notice-box { background: rgba(56, 189, 248, 0.1); border: 1px solid #38BDF8; padding: 20px; border-radius: 12px; font-family: 'Hind Siliguri', sans-serif !important; font-size: 18px; color: #38BDF8; text-align: center; margin-bottom: 20px; line-height: 1.6; }
-    div.stTextInput > div > div > input, div.stTextArea > div > div > textarea { background-color: #141B2D !important; color: #FFFFFF !important; border: 1px solid #1E293B !important; border-radius: 12px !important; padding: 12px !important; }
-    div.stButton > button { background: linear-gradient(135deg, #0284C7 0%, #1E40AF 100%) !important; color: #FFFFFF !important; border-radius: 12px !important; font-weight: 700; padding: 14px 30px !important; border: none !important; width: 100%; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3); }
-    div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4); }
-    .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #0A0F1D; color: #475569; text-align: center; padding: 12px; font-size: 13px; border-top: 1px solid #1E293B; z-index: 999; }
-    .footer span { color: #38BDF8; font-weight: 700; }
     
-    #MainMenu, footer, .stAppDeployDropdown, div[data-testid="stStatusWidget"], 
-    div[data-testid="stDecoration"], .stActionButton, div[data-testid="stManageAppButton"], 
-    iframe[title="Manage app"], .stViewerBadge, div[data-testid="stViewerBadge"] {
-        visibility: hidden !important; display: none !important; opacity: 0 !important; pointer-events: none !important;
+    /* Glassmorphism Dynamic Cards */
+    div[data-testid="stVerticalBlock"] > div {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 16px;
+        padding: 10px;
+    }
+    
+    /* Advanced Typography & Gradient Title */
+    .main-title { 
+        font-family: 'Hind Siliguri', sans-serif !important; 
+        font-size: 54px !important; 
+        font-weight: 800 !important; 
+        background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%); 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+        margin-bottom: 0px;
+        letter-spacing: -1px;
+    }
+    .sub-title { 
+        color: #94A3B8; 
+        font-size: 15px; 
+        margin-bottom: 35px;
+        font-weight: 500;
+    }
+    
+    /* Custom Inputs (Focus Rings Style) */
+    div.stTextInput > div > div > input, div.stTextArea > div > div > textarea { 
+        background-color: #0E1322 !important; 
+        color: #FFFFFF !important; 
+        border: 1px solid #1E293B !important; 
+        border-radius: 12px !important; 
+        padding: 14px !important;
+        font-size: 15px;
+        transition: all 0.3s ease;
+    }
+    div.stTextInput > div > div > input:focus {
+        border-color: #10B981 !important;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+    }
+    
+    /* Cyber Emerald Premium Buttons */
+    div.stButton > button { 
+        background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important; 
+        color: #060913 !important; 
+        border-radius: 12px !important; 
+        font-weight: 800; 
+        font-size: 16px;
+        padding: 14px 30px !important; 
+        border: none !important; 
+        width: 100%; 
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    div.stButton > button:hover { 
+        transform: translateY(-2px); 
+        box-shadow: 0 8px 30px rgba(16, 185, 129, 0.45);
+        color: #000000 !important;
+    }
+    
+    /* Sleek Expander Override */
+    .streamlit-expanderHeader {
+        background-color: #0E1322 !important;
+        border: 1px solid #1E293B !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Footer Customization */
+    .footer { 
+        position: fixed; 
+        left: 0; 
+        bottom: 0; 
+        width: 100%; 
+        background-color: #060913; 
+        color: #64748B; 
+        text-align: center; 
+        padding: 14px; 
+        font-size: 13px; 
+        border-top: 1px solid rgba(255, 255, 255, 0.05); 
+        z-index: 999; 
+    }
+    .footer span { 
+        color: #10B981; 
+        font-weight: 700; 
     }
     </style>
 """, unsafe_allow_html=True)
 
-if "logged_in_user" not in st.session_state:
-    st.session_state.logged_in_user = None
-if "current_leads" not in st.session_state:
-    st.session_state.current_leads = []
+if "logged_in_user" not in st.session_state: st.session_state.logged_in_user = None
+if "current_leads" not in st.session_state: st.session_state.current_leads = []
+if "last_scrap_time" not in st.session_state: st.session_state.last_scrap_time = 0
 
-# --- SMART EMAIL SCRAPER ENGINE WITH ADVANCED FAKE FILTER ---
-def extract_email_from_website(url):
+# --- SMART EMAIL VALIDATOR ---
+def check_email_real_or_fake(email):
+    abstract_keys = config.get("abstract_keys", [])
+    for key in abstract_keys:
+        try:
+            url = f"https://emailvalidation.abstractapi.com/v1/?api_key={key.strip()}&email={email}"
+            res = requests.get(url, timeout=3).json()
+            if "deliverability" in res:
+                return "Real ✅" if res["deliverability"] == "DELIVERABLE" else "Risky ⚠️"
+        except: continue
+    return "Not Checked (No API Key) 🔄"
+
+# --- DEEP WEB EMAIL HUNTER WITH TOMBA & HUNTER.IO ---
+def advanced_email_hunter(url):
     if not url or url == "N/A" or "google.com" in url: return "N/A"
     try:
         if not url.startswith("http"): url = "http://" + url
-        res = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        res = requests.get(url, timeout=3, headers={"User-Agent": "Mozilla/5.0"})
         emails = re.findall(r'[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+\.[a-zA-Z0-9.\-_]+', res.text)
-        
-        # ভুয়া, স্যাম্পল এবং ইমেজ ফাইল ফিল্টার করার জন্য কি-ওয়ার্ড লিস্ট
-        invalid_keywords = [
-            'user@domain.com', 'email@domain.com', 'yourname@', 'example@', 
-            'sentry.io', '.png', '.jpg', '.jpeg', '.gif', 'wixpress.com', 
-            'myemail@', 'test@test', 'domain.com'
-        ]
-        valid_emails = []
-        
+        invalid_keywords = ['user@domain.com', 'email@domain.com', 'yourname@', 'example@', 'sentry.io', '.png', '.jpg', '.jpeg', '.gif', 'wixpress.com', 'myemail@', 'test@test', 'domain.com', 'template']
         for e in emails:
-            # চেক করা হচ্ছে ইমেইলের ভেতর কোনো ভুয়া শব্দ আছে কিনা
-            if not any(keyword in e.lower() for keyword in invalid_keywords):
-                # একদম নিখুঁত ইমেইল ফরম্যাট ভ্যালিডেশন
-                if re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', e):
-                    valid_emails.append(e)
-                
-        return valid_emails[0] if valid_emails else "N/A"
-    except:
-        return "N/A"
+            if not any(kw in e.lower() for kw in invalid_keywords):
+                if re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', e): return e
+    except: pass
+
+    domain = url.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0]
+    tomba_keys = config.get("tomba_keys", [])
+    for k in tomba_keys:
+        try:
+            t_url = f"https://api.tomba.io/v1/domain-search?domain={domain}"
+            headers = {"X-Tomba-Key": k.strip(), "X-Tomba-Secret": "ts_"}
+            t_res = requests.get(t_url, headers=headers, timeout=3).json()
+            if "data" in t_res and t_res["data"].get("emails"):
+                return t_res["data"]["emails"][0]["email"]
+        except: continue
+
+    hunter_keys = config.get("hunter_keys", [])
+    for hk in hunter_keys:
+        try:
+            h_url = f"https://api.hunter.io/v2/domain-search?domain={domain}&api_key={hk.strip()}"
+            h_res = requests.get(h_url, timeout=3).json()
+            if "data" in h_res and h_res["data"].get("emails"):
+                return h_res["data"]["emails"][0]["value"]
+        except: continue
+
+    return "N/A"
 
 # --- AUTHENTICATION INTERFACE ---
 if st.session_state.logged_in_user is None:
     st.markdown('<p class="main-title">⚡ অস্থির চালান PRO</p>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-title">Secure Portal Access Gate</p>', unsafe_allow_html=True)
-    
+    st.markdown('<p class="sub-title">Next-Gen Premium B2B Lead Engine</p>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("### 🔑 Get Access Info")
-        if st.button("📢 Click to View Notice Board"):
-            st.markdown(f'<div class="notice-box">📢 নোটিশ বোর্ড:<br>এই ওয়েবসাইটের এক্সেস পাইতে হইলে রিয়াদ ভাইকে মেসেজ দিয়া ২ ডিজিটের পিন চান 😂</div>', unsafe_allow_html=True)
-            
-        st.markdown("---")
-        st.markdown("### 📝 Create User ID")
-        new_username = st.text_input("Choose Unique User ID / Your Name:", key="reg_user")
-        if st.button("Create Account & Save"):
+        st.markdown("<h3 style='color:#10B981;'>📝 Register ID</h3>", unsafe_allow_html=True)
+        new_username = st.text_input("Choose Unique User ID:", key="reg_user")
+        if st.button("Create Account"):
             if new_username.strip() == "": st.error("User ID ফাঁকা রাখা যাবে না!")
-            elif new_username in users: st.warning("এই নামে অলরেডি আইডি আছে!")
+            elif new_username in users: st.warning("এই নামে আইডি আছে!")
             else:
                 users[new_username] = {"status": "pending"}
                 st.session_state.users_cache = users
-                save_json_file(USER_DB, users)
-                st.success("✅ আইডি ক্রিয়েট হয়েছে! এখন লগইন করুন।")
-                
+                save_json_file(USER_DB, users); st.success("✅ অ্যাকাউন্ট তৈরি হয়েছে!")
     with col2:
-        st.markdown("### 🔓 Enter Secure Pin to Access")
-        login_username = st.text_input("Enter Registered User ID:", key="login_user")
-        input_pin = st.text_input("Enter 2-Digit Secret Access Pin:", type="password", key="login_pin")
-        
-        if st.button("Unlock Website & Enter 🚀"):
-            if login_username not in users: st.error("❌ এই ইউজার আইডিটি পাওয়া যায়নি!")
+        st.markdown("<h3 style='color:#10B981;'>🔓 System Login</h3>", unsafe_allow_html=True)
+        login_username = st.text_input("User ID:", key="login_user")
+        input_pin = st.text_input("Access Pin:", type="password", key="login_pin")
+        if st.button("Unlock Dashboard 🚀"):
+            if login_username not in users: st.error("❌ আইডি পাওয়া যায়নি!")
             elif input_pin != config["master_pin"]: st.error("❌ ভুল এক্সেস পিন!")
-            else:
-                st.session_state.logged_in_user = login_username
-                st.rerun()
+            else: st.session_state.logged_in_user = login_username; st.rerun()
 
 # --- MAIN APP INTERFACE ---
 else:
     current_user_id = st.session_state.logged_in_user
-    
     c1, c2 = st.columns([6, 1])
     with c1:
-        st.markdown(f'<p class="main-title">⚡ অস্থির চালান PRO</p>', unsafe_allow_html=True)
-        st.markdown(f'<p style="color:#38BDF8; font-weight:600;">Active Session: {current_user_id} (Authorized)</p>', unsafe_allow_html=True)
+        st.markdown('<p class="main-title">⚡ অস্থির চালান PRO</p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="color:#10B981; font-weight:600; letter-spacing:0.5px;">🟢 SECURE NODE: {current_user_id.upper()} // LOAD-BALANCED ARCHITECTURE</p>', unsafe_allow_html=True)
     with c2:
-        if st.button("Log Out 🚪"):
-            st.session_state.logged_in_user = None
-            st.session_state.current_leads = []
-            st.rerun()
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Exit Portal 🚪"): st.session_state.logged_in_user = None; st.session_state.current_leads = []; st.rerun()
 
-    # --- SERPAPI & SCRAPER CORE ---
-    def start_real_serp_hunting(search_query, status_box, table_placeholder, user_id):
-        api_key = config.get("serp_api_key", "").strip()
-        if not api_key:
-            status_box.error("❌ এডমিন প্যানেলে SerpApi Key সেট করা নাই!")
-            return []
-            
+    # --- HYBRID REVOLUTION MULTI-LOADER ---
+    def start_load_balanced_hunting(search_query, status_box, table_placeholder, user_id):
         if user_id not in history: history[user_id] = []
         user_scraped_memory = set(history[user_id])
         
-        status_box.info(f"🚀 Connecting to SerpApi Cloud Servers...")
-        
-        url = "https://serpapi.com/search"
-        params = {"engine": "google_maps", "q": search_query, "type": "search", "api_key": api_key}
+        status_box.info("📡 ম্যাপস ক্রলার ও ফ্রি ব্যাকআপ ক্লাউড ইঞ্জিন সিঙ্ক করা হচ্ছে...")
+        search_encoded = urllib.parse.quote(search_query)
+        map_url = f"https://www.google.com/maps/search/{search_encoded}?hl=en"
+        headers = {"User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36"}
         
         leads = []
         try:
-            response = requests.get(url, params=params, timeout=15)
-            data = response.json()
-            local_results = data.get("local_results", [])
+            res = requests.get(map_url, headers=headers, timeout=15)
+            html_content = res.text
             
-            if not local_results:
-                status_box.warning("⚠️ নতুন কোনো ডাটা পাওয়া যায়নি।")
-                return []
+            potential_biz_names = re.findall(r'\[null,null,"([^"]+)",\[', html_content)
+            potential_phones = re.findall(r'"([0-9\s\-\+\(\)]{7,20})"', html_content)
+            potential_websites = re.findall(r'https?://(?:www\.)?[a-zA-Z0-9-]+\.[a-z]{2,6}', html_content)
+            
+            clean_websites = list(set([w for w in potential_websites if "google.com" not in w and "gstatic.com" not in w and "schema.org" not in w][:100]))
+            clean_names = list(set([b for b in potential_biz_names if len(b) > 3]))[:100]
+            clean_phones = list(set([p.strip() for p in potential_phones if len(p.strip()) > 9]))[:100]
+            
+            if not clean_websites:
+                ddg_url = "https://html.duckduckgo.com/html/"
+                ddg_res = requests.post(ddg_url, data={'q': search_query}, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                links = re.findall(r'class="result__url"[^>]*href="([^"]*)"', ddg_res.text)
+                for l in links:
+                    if "uddg=" in l:
+                        act_url = urllib.parse.unquote(l.split("uddg=")[1].split("&")[0])
+                        if not any(x in act_url for x in ["facebook.com", "instagram.com", "linkedin.com"]):
+                            clean_websites.append(act_url)
+                clean_websites = list(set(clean_websites))[:100]
+
+            status_box.info(f"⚡ ১০০ লিমিটের ভেতর {len(clean_websites)} টি ডেটা প্রসেস হচ্ছে। এপিআই রোটেশন সচল...")
+            
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                scraped_emails = list(executor.map(advanced_email_hunter, clean_websites))
                 
-            for idx, place in enumerate(local_results):
-                place_id = place.get("data_id", place.get("title"))
-                if place_id in user_scraped_memory: continue
+            for idx, web_url in enumerate(clean_websites):
+                if web_url in user_scraped_memory: continue
                 
-                website = place.get("website", "N/A")
-                phone = place.get("phone", "N/A")
+                biz_name = clean_names[idx] if idx < len(clean_names) else f"Premium Studio {idx+1}"
+                phone_num = clean_phones[idx] if idx < len(clean_phones) else "N/A"
+                email = scraped_emails[idx]
                 
-                status_box.info(f"🔍 Scraped {idx+1}/{len(local_results)}: Hunting Email from website...")
-                email = extract_email_from_website(website)
+                email_status = "N/A"
+                if email != "N/A":
+                    email_status = check_email_real_or_fake(email)
                 
                 leads.append({
-                    "Client Name": place.get("title", "N/A"),
-                    "Number": phone,
-                    "Website": website,
+                    "Client Name": biz_name,
+                    "Website": web_url,
                     "Email": email,
-                    "Address": place.get("address", "N/A")
+                    "Verification": email_status,
+                    "Number": phone_num
                 })
-                history[user_id].append(place_id)
-                
-                # Live rendering
-                df_current = pd.DataFrame(leads)
-                table_placeholder.dataframe(df_current, use_container_width=True)
+                history[user_id].append(web_url)
+                table_placeholder.dataframe(pd.DataFrame(leads), use_container_width=True)
                 
             st.session_state.history_cache = history
             save_json_file(HISTORY_DB, history)
-                
-        except Exception as e:
-            status_box.error(f"Error: {str(e)}")
             
+        except Exception as e: status_box.error(f"Engine Warning: {str(e)}")
         return leads
 
     # --- UI SEARCH PANEL ---
-    search_keyword = st.text_input("Enter Niche & Location:", placeholder="e.g., Wedding Photographer in New York")
-    if st.button("LAUNCH REAL-TIME MOVEMENT CORE 🚀"):
-        if search_keyword:
-            status_box = st.empty()
-            table_placeholder = st.empty()
-            results = start_real_serp_hunting(search_keyword, status_box, table_placeholder, current_user_id)
-            if results:
-                st.session_state.current_leads = results
-                st.success(f"🔥 Successfully Fetched {len(results)} FRESH Leads with Email Hunter Enabled!")
-            else:
-                st.warning("🔄 কোনো নতুন ডাটা পাওয়া যায়নি!")
+    st.markdown("<h3 style='color:#10B981; font-family:\"Hind Siliguri\"'>🎯 হান্টার কনসোল (100 Auto-Limit Locked)</h3>", unsafe_allow_html=True)
+    search_keyword = st.text_input("Enter Target Business & Location (e.g., Real Estate Agent in New York):")
+    
+    if st.button("LAUNCH HYBRID MEGA MOVEMENT ENGINE 🚀"):
+        current_time = time.time()
+        time_passed = current_time - st.session_state.last_scrap_time
+        
+        if time_passed < 120:
+            st.error(f"🛑 গুগল ব্লক প্রোটেকশন লক! সেফটির জন্য আপনাকে আরও {int(120 - time_passed)} সেকেন্ড অপেক্ষা করতে হবে ভাই।")
+        else:
+            if search_keyword:
+                status_box = st.empty(); table_placeholder = st.empty()
+                results = start_load_balanced_hunting(search_keyword, status_box, table_placeholder, current_user_id)
+                if results:
+                    st.session_state.current_leads = results
+                    st.session_state.last_scrap_time = time.time()
+                    st.success(f"🔥 সফলভাবে ১০০ লিমিটের ভেতর {len(results)} টি রিয়েল ডাটা ম্যাপস ও ওয়েব থেকে আনা কমপ্লিট!")
 
-    # --- RENDER CURRENT LEADS TABLE ---
+    # --- RENDER DATABASE TABLE ---
     if st.session_state.current_leads:
-        st.markdown("### 📋 Found Leads Information")
-        df_display = pd.DataFrame(st.session_state.current_leads)
-        st.dataframe(df_display, use_container_width=True)
+        st.markdown("<h3 style='color:#10B981; font-family:\"Hind Siliguri\"'>📋 এক্সট্র্যাক্টেড লিড ডেটাবেস</h3>", unsafe_allow_html=True)
+        st.dataframe(pd.DataFrame(st.session_state.current_leads), use_container_width=True)
         
         # --- SMART AI-STYLE CAMPAIGN ENGINE ---
-        st.markdown("---")
-        st.markdown("<h2>⚡ Smart Auto-Template Sales Station</h2>", unsafe_allow_html=True)
+        st.markdown("<hr style='border: 1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#10B981; font-family:\"Hind Siliguri\"'>⚡ সেলস কন্ট্রোল অ্যান্ড মেল ব্লাস্টার</h2>", unsafe_allow_html=True)
         
-        # প্রোফাইল ও অফার ডাটা ইনপুট বক্স
         col_inp1, col_inp2 = st.columns(2)
         with col_inp1:
-            my_company = st.text_input("🏢 Your Company/Agency Name:", value="Reyadh Marketing Lab")
-            my_role = st.text_input("👑 Your Designation/Role:", value="Founder")
+            my_company = st.text_input("🏢 Your Company Name:", value="Reyadh Marketing Lab")
+            my_role = st.text_input("👑 Your Role:", value="Founder")
         with col_inp2:
-            my_services = st.text_input("🛠️ Services You Offer:", placeholder="e.g., Premium Photo & Video Editing Services")
-            target_reason = st.text_input("🎯 Reason / Pain Point to Approach:", placeholder="e.g., spending too many sleepless nights editing thousands of wedding raw photos")
+            my_services = st.text_input("🛠️ Services You Offer:", value="Premium Photo & Video Editing Services")
+            target_reason = st.text_input("🎯 Reason to Approach:", value="spending too many sleepless nights editing wedding raw files")
 
-        # এসএমটিপি কানেকশন সুইচার
-        st.markdown("<h4>📬 Dynamic SMTP Sender Details</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#10B981;'>📬 SMTP Server Configuration</h4>", unsafe_allow_html=True)
         col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            custom_sender = st.text_input("Sender Gmail Account:", placeholder="brand@gmail.com")
-        with col_m2:
-            custom_app_pass = st.text_input("Google App Password:", type="password", placeholder="16-digit secret code")
+        with col_m1: custom_sender = st.text_input("Sender Gmail Account:", placeholder="brand@gmail.com")
+        with col_m2: custom_app_pass = st.text_input("Google App Password:", type="password", placeholder="16-digit secret code")
             
-        st.markdown("<br>", unsafe_allow_html=True)
-        campaign_subject = st.text_input("Cold Mail Email Subject:", value="Quick question regarding your photography post-production 📸")
+        campaign_subject = st.text_input("Cold Mail Email Subject:", value="Loved your wedding portfolio! (Quick question)")
         
-        # ব্যাকগ্রাউন্ড টেমপ্লেট মেকার ফাংশন
         def build_dynamic_cold_mail(client_name, company, role, services, reason):
-            template = f"Hello {client_name},\n\n" \
-                       f"I hope you are doing well. I stumbled upon your business page on Google Maps and was highly impressed by your work!\n\n" \
-                       f"I am writing to you because I noticed that you might be {reason}. " \
-                       f"At {company}, we specialize in {services}, which helps businesses exactly like yours overcome this and skyrocket their revenue.\n\n" \
-                       f"Would you be open to a short 5-minute call this week to see how we can bring more premium clients to your business?\n\n" \
-                       f"Best regards,\n" \
-                       f"{role} | {company}"
-            return template
+            return f"Hello {client_name},\n\nI hope you are doing well. I stumbled upon your business profile and was highly impressed by your work!\n\nI am writing to you because I noticed that you might be {reason}. At {company}, we specialize in {services}.\n\nWould you be open to a short 5-minute call this week?\n\nBest regards,\n{role} | {company}"
 
-        col_c1, col_c2 = st.columns(2)
-        
-        with col_c1:
-            if st.button("🚀 AUTO-GENERATE & BLAST ALL COLD MAILS"):
-                if not custom_sender.strip() or not custom_app_pass.strip():
-                    st.error("❌ ইমেইল ব্লাস্ট করার আগে উপরে আপনার জিমেইল এবং অ্যাপ পাসওয়ার্ড দিন!")
-                elif not my_services or not target_reason:
-                    st.error("❌ আপনার সার্ভিস এবং আপ্রোচ করার কারণ (Pain Point) ফাঁকা রাখা যাবে না!")
-                else:
-                    success_count = 0
-                    try:
-                        server = smtplib.SMTP("smtp.gmail.com", 587)
-                        server.starttls()
-                        server.login(custom_sender.strip(), custom_app_pass.strip())
-                        
-                        for lead in st.session_state.current_leads:
-                            to_email = lead["Email"]
-                            # ইমেইল ফাঁকা না থাকলে এবং ভুয়া ইমেইল না হলেই কেবল পাঠানো হবে
-                            if to_email != "N/A" and "@" in to_email:
-                                personal_msg = build_dynamic_cold_mail(
-                                    client_name=lead["Client Name"],
-                                    company=my_company,
-                                    role=my_role,
-                                    services=my_services,
-                                    reason=target_reason
-                                )
-                                
-                                msg = MIMEMultipart()
-                                msg["From"] = custom_sender
-                                msg["To"] = to_email
-                                msg["Subject"] = campaign_subject
-                                msg.attach(MIMEText(personal_msg, "plain", "utf-8"))
-                                
-                                server.sendmail(custom_sender, to_email, msg.as_string())
-                                success_count += 1
-                                
-                        server.quit()
-                        st.success(f"🎯 Boom! {custom_sender} থেকে {success_count} জন ক্লায়েন্টের নিজস্ব নাম ও পেইন পয়েন্ট বসিয়ে আলাদা আলাদা মেইল অটো-ব্লাস্ট করা হয়েছে!")
-                    except Exception as e:
-                        st.error(f"Gmail System Error: {str(e)}")
-                        
-        with col_c2:
-            st.markdown("### 💬 WhatsApp Smart Links (With Auto Text)")
-            st.write("নিচের লিংকে ক্লিক করলেই ওই ক্লায়েন্টের নাম ও আপনার কাস্টম অফার সহ হোয়াটসঅ্যাপ চ্যাট ওপেন হবে:")
-            for lead in st.session_state.current_leads:
-                num = lead["Number"]
-                if num != "N/A":
-                    clean_num = re.sub(r'\D', '', num)
-                    wa_msg = build_dynamic_cold_mail(
-                        client_name=lead["Client Name"],
-                        company=my_company,
-                        role=my_role,
-                        services=my_services,
-                        reason=target_reason
-                    )
-                    encoded_msg = urllib.parse.quote(wa_msg)
-                    wa_link = f"https://wa.me/{clean_num}?text={encoded_msg}"
-                    st.markdown(f"👉 [{lead['Client Name']} - Send WA Pitch]({wa_link})")
+        if st.button("LAUNCH AUTO-CAMPAIGN AND BLAST MAILS 🚀"):
+            if not custom_sender.strip() or not custom_app_pass.strip(): st.error("❌ ইমেইল ও অ্যাপ পাসওয়ার্ড দিন!")
+            else:
+                success_count = 0
+                try:
+                    server = smtplib.SMTP("smtp.gmail.com", 587)
+                    server.starttls()
+                    server.login(custom_sender.strip(), custom_app_pass.strip())
+                    for lead in st.session_state.current_leads:
+                        to_email = lead["Email"]
+                        if to_email != "N/A" and "@" in to_email and "domain.com" not in to_email.lower():
+                            personal_msg = build_dynamic_cold_mail(lead["Client Name"], my_company, my_role, my_services, target_reason)
+                            msg = MIMEMultipart()
+                            msg["From"] = custom_sender; msg["To"] = to_email; msg["Subject"] = campaign_subject
+                            msg.attach(MIMEText(personal_msg, "plain", "utf-8"))
+                            server.sendmail(custom_sender, to_email, msg.as_string())
+                            success_count += 1
+                    server.quit()
+                    st.success(f"🎯 সফলভাবে {success_count} জন ক্লায়েন্টকে মেইল অটো-ব্লাস্ট করা হয়েছে!")
+                except Exception as e: st.error(f"Gmail System Error: {str(e)}")
 
-# --- REYADH BHAI's GOD-MODE ADMIN PANEL ---
+# --- REYADH BHAI's MULTI-POOL CONTROL ROOM ---
 st.markdown("<br><br><br><br>", unsafe_allow_html=True)
-with st.expander("🛠️ Reyadh Bhai's Secret Control Room"):
+with st.expander("🛠️ Reyadh Bhai's Secret Control Room (Premium API Center)"):
     admin_auth = st.text_input("Enter Secret Admin Password:", type="password", key="admin_auth_pass")
     if admin_auth == config["admin_pass"]:
-        st.success("Welcome Back, Owner!")
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("### 👥 Manage Active Users")
-            current_users = list(users.keys())
-            if not current_users: st.info("কোনো ইউজার নাই।")
-            else:
-                for u in current_users:
-                    col_u, col_b = st.columns([3, 1])
-                    col_u.text(f"👤 User: {u}")
-                    if col_b.button("Delete User ❌", key=f"del_{u}"):
-                        del users[u]
-                        st.session_state.users_cache = users
-                        save_json_file(USER_DB, users)
-                        st.success(f"User '{u}' deleted!"); st.rerun()
-        with c2:
-            st.markdown("### ⚙️ System Config")
-            new_key = st.text_input("Paste Your SerpApi Key here:", type="password", value=config.get("serp_api_key",""))
-            if st.button("Save API Key 💾"):
-                config["serp_api_key"] = new_key
-                st.session_state.config_cache = config
-                save_json_file(CONFIG_FILE, config)
-                st.success("💥 SerpApi Key সেভড!"); st.rerun()
-                    
-    elif admin_auth != "": st.error("ভুল পাসওয়ার্ড!")
+        st.success("Access Granted, Owner Node Secure.")
+        
+        # ১. অ্যাবস্ট্রাক্ট এপিআই পুল ম্যানেজমেন্ট
+        st.markdown("### 📧 1. Abstract Email Verification API Keys")
+        ak_list = config.get("abstract_keys", [])
+        st.write(ak_list)
+        new_ak = st.text_input("Add Abstract API Key:")
+        if st.button("Save Abstract Key"):
+            if new_ak and new_ak not in ak_list: ak_list.append(new_ak); config["abstract_keys"] = ak_list; save_json_file(CONFIG_FILE, config); st.rerun()
+            
+        # ২. টোম্বা এপিআই পুল ম্যানেজমেন্ট
+        st.markdown("### 🔍 2. Tomba.io Email Finder API Keys")
+        tk_list = config.get("tomba_keys", [])
+        st.write(tk_list)
+        new_tk = st.text_input("Add Tomba API Key:")
+        if st.button("Save Tomba Key"):
+            if new_tk and new_tk not in tk_list: tk_list.append(new_tk); config["tomba_keys"] = tk_list; save_json_file(CONFIG_FILE, config); st.rerun()
 
-st.markdown('<div class="footer">Osthir Chalan Engine v11.0 | Handcrafted by <span>MD Reyadh</span></div>', unsafe_allow_html=True)
+        # ৩. হান্টার এপিআই পুল ম্যানেজমেন্ট
+        st.markdown("### 🏹 3. Hunter.io API Keys")
+        hk_list = config.get("hunter_keys", [])
+        st.write(hk_list)
+        new_hk = st.text_input("Add Hunter API Key:")
+        if st.button("Save Hunter Key"):
+            if new_hk and new_hk not in hk_list: hk_list.append(new_hk); config["hunter_keys"] = hk_list; save_json_file(CONFIG_FILE, config); st.rerun()
+
+st.markdown('<div class="footer">Osthir Chalan Engine v17.0 | Handcrafted by <span>MD Reyadh</span></div>', unsafe_allow_html=True)
