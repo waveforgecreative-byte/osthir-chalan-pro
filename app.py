@@ -67,7 +67,7 @@ st.markdown("""
     .welcome-banner { background: linear-gradient(90deg, #0F172A, #1E293B); border-left: 5px solid #00FF66; padding: 18px; border-radius: 10px; font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #FFFFFF; font-family: 'Hind Siliguri', sans-serif; }
     .notice-board { background-color: #0F172A; border-left: 4px solid #38BDF8; padding: 15px; border-radius: 8px; margin-bottom: 25px; color: #F1F5F9; }
     
-    /* Premium Instagram Section UI */
+    /* Premium UX Boxes */
     .target-box { background-color: #0F172A; border: 1px solid #1E293B; padding: 20px; border-radius: 12px; margin-top: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     .step-card { background: #111827; border: 1px solid #374151; padding: 12px; border-radius: 8px; margin-bottom: 10px; color: #F3F4F6; }
     
@@ -286,20 +286,25 @@ else:
                         except Exception as e:
                             st.error(f"❌ জিমেইল সার্ভার কানেকশন এরর: {str(e)}. অ্যাপ পাসওয়ার্ড বা মেইল আইডি পুনরায় চেক করুন!")
 
-    # --- TAB 2: INSTAGRAM HUNTER ENGINE (ULTRA USER-FRIENDLY INTERFACE) ---
+    # --- TAB 2: INSTAGRAM HUNTER ENGINE (INTERNATIONAL UX & BUG FIXED) ---
     with engine_tab2:
-        st.markdown("<h2 style='color:#00FF66; font-family:Hind Siliguri;'>📸 ইনস্টাগ্রাম আনলিমিটেড হান্টিং প্যানেল (Zero-API ওয়ান ক্লিক মোড)</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='color:#A5B4FC;'>মেম্বারদের জন্য সুখ খবর: কোনো পেইড এপিআই বা টোকেন লাগবে না। ১০০% সেফ উপায়ে সরাসরি আসল ক্লায়েন্ট ফিল্টার হবে।</p>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#00FF66; font-family:Hind Siliguri;'>📸 ইনস্টাগ্রাম আনলিমিটেড গ্লোবাল হান্টিং প্যানেল (USA, UK & Top Countries)</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#A5B4FC;'>মেম্বারদের জন্য সুখবর: কোনো পেইড এপিআই ছাড়াই এখন সরাসরি USA, UK, Canada ও Australia-র প্রিমিয়াম বায়ার ফিল্টার করতে পারবেন।</p>", unsafe_allow_html=True)
         st.write("---")
 
         ui_col1, ui_col2 = st.columns([2, 3])
         with ui_col1:
+            target_country = st.selectbox(
+                "🌐 টার্গেট বায়ার কান্ট্রি (Target Country):", 
+                options=["United States (USA)", "United Kingdom (UK)", "Canada", "Australia", "Worldwide (Global)"]
+            )
+            
             inst_query = st.text_input("🔍 টার্গেট নিশ বা কিওয়ার্ড লিখুন:", value=st.session_state.insta_query_saved, placeholder="যেমন: wedding photographer")
             
             default_pitch = "Hey, your wedding portfolio looks absolutely stunning! 📸 We specialize in ultra-fast premium video editing and color grading. Can I drop a quick 30-second link to our work sample?"
             short_pitch = st.text_area("✍️ মেম্বারদের জন্য কিলার পিচ টেক্সট সেট করুন:", value=default_pitch, height=120)
             
-            run_hunting = st.button("🚀 হান্টিং রাডার অ্যাক্টিভেট করুন", use_container_width=True)
+            run_hunting = st.button("🚀 গ্লোবাল হান্টিং রাডার অ্যাক্টিভেট করুন", use_container_width=True)
             
             if run_hunting:
                 if not inst_query.strip():
@@ -307,53 +312,70 @@ else:
                 else:
                     st.session_state.insta_query_saved = inst_query.strip()
                     history_logs.append({
-                        "user": current_user_id, "engine": "Instagram Ultra-UX", "keyword": inst_query.strip(), "count": "Unlimited", "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
+                        "user": current_user_id, 
+                        "engine": f"Instagram Global ({target_country})", 
+                        "keyword": inst_query.strip(), 
+                        "count": "Unlimited", 
+                        "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
                     })
                     save_json_file(HISTORY_DB, history_logs)
-                    st.success("🎯 রাডার সক্রিয় হয়েছে! ডানের প্যানেলটি দেখুন।")
+                    st.success(f"🎯 {target_country} রাডার সক্রিয় হয়েছে! ডানের প্যানেলটি দেখুন।")
 
         with ui_col2:
             if st.session_state.insta_query_saved:
                 st.markdown(f"""
                 <div class="target-box">
-                    <h3 style="color:#00FF66; margin-top:0;">🎯 Client Target Control Panel</h3>
+                    <h3 style="color:#00FF66; margin-top:0;">🎯 International Client Control Panel</h3>
                     <p style="color:#94A3B8; font-size:14px;"><b>সক্রিয় সার্চ নিশ:</b> <span style="color:#38BDF8; font-weight:bold;">{st.session_state.insta_query_saved}</span></p>
+                    <p style="color:#94A3B8; font-size:14px;"><b>টার্গেট লোকেশন:</b> <span style="color:#F43F5E; font-weight:bold;">{target_country}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 st.markdown("<p style='color:#00FF66; font-weight:bold; margin-top:15px;'>👉 ক্লায়েন্ট হান্ট করার ৩ সেকেন্ডের ম্যাজিক নিয়ম:</p>", unsafe_allow_html=True)
                 
                 st.markdown("""
-                <div class="step-card"><b>ধাপ ১:</b> নিচের বাটনটিতে ক্লিক করে মেসেজটি আপনার পিসির কিবোর্ডে অটো-কপি করে নিন।</div>
+                <div class="step-card"><b>ধাপ ১:</b> নিচের বক্সের টেক্সটটি কপি করে নিন (ডান কোণায় মাউস নিলে ছোট কপি বাটন পাবেন)।</div>
                 """, unsafe_allow_html=True)
                 
-                st.copy_to_clipboard(short_pitch, before_text="📋 এখানে ক্লিক করে মেসেজটি কপি করুন ➔ ", after_text="✅ মেসেজ কপি হয়ে গেছে! এবার নিচের বাটনে যান।")
+                # Fixed bug using st.code instead of st.copy_to_clipboard to prevent Streamlit Cloud crashes
+                st.code(short_pitch, language="text")
                 
                 st.markdown("""
-                <div class="step-card" style="margin-top:15px;"><b>ধাপ ২:</b> এবার নিচের যেকোনো একটি মেথড বাটনে ক্লিক করে বায়ারদের লাইভ ডিরেক্টরি ওপেন করুন।</div>
+                <div class="step-card" style="margin-top:15px;"><b>ধাপ ২:</b> এবার নিচের বাটন থেকে ইন্টারন্যাশনাল বায়ার ডিরেক্টরি ওপেন করুন।</div>
                 """, unsafe_allow_html=True)
                 
+                country_suffix = ""
+                if "USA" in target_country: country_suffix = " AND (NY OR LA OR California OR Texas OR USA)"
+                elif "UK" in target_country: country_suffix = " AND (London OR UK OR Manchester)"
+                elif "Canada" in target_country: country_suffix = " AND (Toronto OR Vancouver OR Canada)"
+                elif "Australia" in target_country: country_suffix = " AND (Sydney OR Melbourne OR Australia)"
+                
                 raw_q = st.session_state.insta_query_saved
-                encoded_q = urllib.parse.quote(raw_q)
-                people_search_url = f"https://www.instagram.com/explore/tags/{raw_q.replace(' ', '')}/"
-                web_search_url = f"https://www.google.com/search?q=site:instagram.com+%22{encoded_q}%22"
+                final_google_query = f'site:instagram.com "{raw_q}"{country_suffix}'
+                encoded_q = urllib.parse.quote(final_google_query)
+                
+                geo_tag = "usa" if "USA" in target_country else ("uk" if "UK" in target_country else ("canada" if "Canada" in target_country else ("australia" if "Australia" in target_country else "")))
+                hashtag_format = raw_q.replace(' ', '') + geo_tag
+                
+                people_search_url = f"https://www.instagram.com/explore/tags/{hashtag_format}/"
+                web_search_url = f"https://www.google.com/search?q={encoded_q}"
                 
                 btn_col1, btn_col2 = st.columns(2)
                 with btn_col1:
-                    st.markdown(f'<a href="{people_search_url}" target="_blank"><button style="background-color:#E1306C; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(225,48,108,0.3);">⚡ মেথড ১: ওপেন ইনস্টাগ্রাম নিশ ফিড 📸</button></a>', unsafe_allow_html=True)
-                    st.caption("কিওয়ার্ডের ওপর মানুষের রিসেন্ট পোস্ট ও আইডি দেখতে এটি ব্যবহার করুন।")
+                    st.markdown(f'<a href="{people_search_url}" target="_blank"><button style="background-color:#E1306C; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(225,48,108,0.3);">⚡ মেথড ১: ওপেন {target_country} নিশ ফিড 📸</button></a>', unsafe_allow_html=True)
+                    st.caption(f"ঐ দেশের নির্দিষ্ট #{hashtag_format} ট্যাগ ব্যবহারকারী বায়ারদের পোস্ট আসবে।")
                     
                 with btn_col2:
                     st.markdown(f'<a href="{web_search_url}" target="_blank"><button style="background-color:#4285F4; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(66,133,244,0.3);">⚡ মেথড ২: গুগল এক্স-রে বায়ার ফিল্টার 🎯</button></a>', unsafe_allow_html=True)
-                    st.caption("যাদের মূল বায়োতে (Bio) এই কিওয়ার্ডটি লেখা আছে শুধু তাদের আইডি আসবে।")
+                    st.caption(f"শুধুমাত্র {target_country}-এর যেসকল আইডির বায়োতে এই কিওয়ার্ড আছে তাদের লিস্ট আসবে।")
                 
                 st.markdown("""
                 <div class="step-card" style="background-color:#064E3B; border-color:#10B981; margin-top:15px;">
-                <b>ধাপ ৩:</b> বায়ারের প্রোফাইলে গিয়ে মেসেজ (Message) বক্সে মাউস রেখে জাস্ট <b>Ctrl + V</b> চেপে পেস্ট করে দিন এবং সেন্ড করুন! কোনো টাইপিং এর ঝামেলা ছাড়াই বায়ার নক ডান। 🔥
+                <b>ধাপ ৩:</b> বায়ারের প্রোফাইলে গিয়ে মেসেজ (Message) বক্সে মাউস রেখে জাস্ট <b>Ctrl + V</b> চেপে পেস্ট করে দিন এবং সেন্ড করুন! কোনো রিজিওনাল বা লোকাল আইডি আসবে না, সব প্রিমিয়াম বায়ার। 🔥
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.info("💡 বাম পাশের বক্সে আপনার কাঙ্ক্ষিত নিশ কিওয়ার্ডটি লিখে 'হান্টিং রাডার অ্যাক্টিভেট করুন' বাটনে চাপ দিলে এখানে ওয়ান-ক্লিক কন্ট্রোল প্যানেল ভেসে উঠবে।")
+                st.info("💡 বাম পাশের বক্সে আপনার টার্গেট দেশ ও নিশ কিওয়ার্ড লিখে 'গ্লোবাল হান্টিং রাডার অ্যাক্টিভেট করুন' বাটনে চাপ দিন।")
 
     # --- TAB 3: CYBER MESSENGER & HQ VIDEO CALL ---
     with engine_tab3:
