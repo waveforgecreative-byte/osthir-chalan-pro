@@ -288,9 +288,9 @@ else:
                         except Exception as e:
                             st.error(f"❌ জিমেইল সার্ভার কানেকশন এরর: {str(e)}. অ্যাপ পাসওয়ার্ড বা মেইল আইডি পুনরায় চেক করুন!")
 
-    # --- TAB 2: INSTAGRAM HUNTER ENGINE ---
+    # --- TAB 2: INSTAGRAM HUNTER ENGINE (OPTIMIZED WITH DYNAMIC MIXED SEARCH) ---
     with engine_tab2:
-        st.subheader("📸 Instagram Live Target Hunting Engine (Option A - Personal API)")
+        st.subheader("📸 Instagram Live Target Hunting Engine")
         
         apify_token = st.text_input("🔑 আপনার Apify API Token সেট করুন (Apify > Settings > Integrations):", type="password", value=users[current_user_id].get("apify_api_key", ""))
         if st.button("Apify Token সেভ করুন 💾", key="save_api_insta"):
@@ -298,11 +298,11 @@ else:
             save_json_file(USER_DB, users)
             st.success("Apify Token Successfully Logged!")
 
-        inst_query = st.text_input("ইনস্টাগ্রাম টার্গেট নিশ বা ট্যাগ কিওয়ার্ড (যেমন: wedding_photographer):")
+        inst_query = st.text_input("ইনস্টাগ্রাম টার্গেট নিশ বা কিওয়ার্ড (যেমন: wedding photographer):")
         insta_limit = st.number_input("লিড সংখ্যা (সর্বোচ্চ ২০টি অনুমোদিত):", min_value=1, max_value=20, value=10)
         interval_delay = st.slider("প্রতিটি মেসেজ লিংক জেনারেশন ডিলে (সেকেন্ড):", min_value=2, max_value=20, value=5)
         
-        default_pitch = "Hey {Name}, your wedding portfolio is stunning! But the peak season backlog of culling, photo color-correcting, and editing highlights or full films must be exhausting. We specialize in wedding photo/video editing with ultra-fast turnaround and daily updates. Can I send a quick link to our recent editing portfolio?"
+        default_pitch = "Hey {Name}, your wedding portfolio is stunning! We specialize in wedding photo/video editing with ultra-fast turnaround. Can I send a quick link to our recent editing portfolio?"
         short_pitch = st.text_area("ইনস্টাগ্রাম কিলার শর্ট হুক পিচ ({Name} দিন):", value=default_pitch)
         
         if st.button("ইনস্টাগ্রাম হান্টিং স্টার্ট করুন 🚀"):
@@ -311,19 +311,23 @@ else:
             elif not inst_query.strip(): 
                 st.error("❌ নিশ কিওয়ার্ড দিন।")
             else:
-                with st.spinner("Apify ক্লাউড সার্ভার থেকে লাইভ ইনস্টাগ্রাম ডেটা ক্রিপ্টোগ্রাফি করা হচ্ছে..."):
-                    clean_q = inst_query.strip().lower().replace(" ", "")
-                    run_input = {"search": clean_q, "searchType": "user", "resultsLimit": int(insta_limit)}
+                with st.spinner("Apify ক্লাউড সার্ভার থেকে লাইভ ইনস্টাগ্রাম ডেটা স্ক্রিপ্ট করা হচ্ছে..."):
+                    clean_q = inst_query.strip().replace("#", "")
+                    run_input = {
+                        "search": clean_q,
+                        "searchType": "mixed",  # 'user' থেকে 'mixed' করা হলো যাতে নাম এবং বায়ো দুইটাই ম্যাপিং করে
+                        "resultsLimit": int(insta_limit)
+                    }
                     actor_url = f"https://api.apify.com/v2/acts/apify~instagram-scraper/runs?token={apify_token}"
                     
                     try:
-                        res = requests.post(actor_url, json=run_input, timeout=20)
+                        res = requests.post(actor_url, json=run_input, timeout=25)
                         if res.status_code in [200, 201]:
                             run_data = res.json()
                             dataset_id = run_data["data"]["defaultDatasetId"]
                             
-                            st.caption("🔄 ক্লাউড রেসপন্স রিসিভড। ৫ সেকেন্ড ডেটা প্রসেসিং হোল্ড...")
-                            time.sleep(5)
+                            st.caption("🔄 ক্লাউড রেসপন্স রিসিভড। ডেটা প্রসেসিংয়ের জন্য ৭ সেকেন্ড হোল্ড...")
+                            time.sleep(7)
                             
                             fetch_url = f"https://api.apify.com/v2/datasets/{dataset_id}/items?token={apify_token}"
                             items_res = requests.get(fetch_url)
@@ -332,18 +336,20 @@ else:
                                 raw_items = items_res.json()
                                 i_leads = []
                                 for idx, item in enumerate(raw_items):
-                                    if idx >= insta_limit: break
-                                    username = item.get("username", "")
-                                    full_name = item.get("fullName", username if username else f"Creator_{idx}")
-                                    phone = item.get("publicPhone", "None")
+                                    username = item.get("username") or item.get("input", {}).get("search")
+                                    if not username and item.get("user"):
+                                        username = item.get("user", {}).get("username")
+                                        
+                                    full_name = item.get("fullName") or item.get("user", {}).get("fullName") or username
+                                    phone = item.get("publicPhone") or ""
                                     
-                                    if username:
+                                    if username and len(i_leads) < insta_limit:
                                         i_leads.append({
-                                            "Name": full_name, "Username": f"@{username}", "Phone": phone if phone and phone != "None" else ""
+                                            "Name": full_name, "Username": f"@{username}", "Phone": phone
                                         })
                                 
                                 if not i_leads:
-                                    st.error("❌ এপিআই সাকসেসফুল কিন্তু ইনস্টাগ্রাম এই কিওয়ার্ডের কোনো সচল ইউজার প্রোফাইল ব্যাক করেনি।")
+                                    st.error("❌ এপিআই সাকসেসফুল কিন্তু ইনস্টাগ্রাম এই কিওয়ার্ডের কোনো সচল ইউজার প্রোফাইল ব্যাক করেনি। কিওয়ার্ড পরিবর্তন করে ট্রাই করুন (যেমন: শুধু wedding বা photo)।")
                                     st.session_state.insta_leads = []
                                 else:
                                     st.session_state.insta_leads = i_leads
@@ -538,7 +544,7 @@ else:
                     if st.button(f"রিপ্লাই পাঠান", key=f"btn_rep_{c.get('id')}"):
                         complaints[idx]["reply"] = rep_input.strip()
                         save_json_file(COMPLAINT_DB, complaints)
-                        st.success("✅举报 রিপ্লাই পাঠানো হয়েছে।")
+                        st.success("✅ রিপ্লাই পাঠানো হয়েছে।")
                         time.sleep(0.5); st.rerun()
 
 st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v35.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
