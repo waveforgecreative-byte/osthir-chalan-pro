@@ -56,7 +56,7 @@ dm_messages = st.session_state.dm_cache
 complaints = st.session_state.complaint_cache
 asami_list = st.session_state.asami_cache
 
-st.set_page_config(page_title="অস্থির চালান PRO v42.0 🖥️⚡", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v43.0 🖥️⚡", page_icon="🥷", layout="wide")
 
 # --- CUSTOM CSS UI ---
 st.markdown("""
@@ -87,24 +87,24 @@ if "current_leads" not in st.session_state: st.session_state.current_leads = []
 if "insta_query_saved" not in st.session_state: st.session_state.insta_query_saved = ""
 if "active_dm_user" not in st.session_state: st.session_state.active_dm_user = None
 
-# --- ASAMI LOCK CHECKER ---
+# --- ASAMI LOCK CHECKER (EPOCH TIMESTAMP BASED - BULLETPROOF) ---
 def check_user_lock(u_id):
-    if u_id == "CEO 👑": return False, ""
+    if u_id == "CEO 👑" or not u_id: return False, ""
     if u_id in asami_list:
-        lock_until_str = asami_list[u_id].get("lock_until", "")
-        if lock_until_str:
-            try:
-                expiry = datetime.datetime.strptime(lock_until_str, "%Y-%m-%d %H:%M:%S")
-                if datetime.datetime.now() < expiry:
-                    rem_time = expiry - datetime.datetime.now()
-                    hours = int(rem_time.total_seconds() // 3600)
-                    minutes = int((rem_time.total_seconds() % 3600) // 60)
-                    return True, f"{hours} ঘণ্টা {minutes} মিনিট"
-                else:
-                    # টাইম শেষ হলে অটো লিস্ট থেকে ডিলিট
-                    del asami_list[u_id]
-                    save_json_file(ASAMI_DB, asami_list)
-            except: pass
+        lock_until_ts = asami_list[u_id].get("lock_until_ts", 0)
+        current_ts = time.time()
+        if current_ts < lock_until_ts:
+            rem_seconds = lock_until_ts - current_ts
+            hours = int(rem_seconds // 3600)
+            minutes = int((rem_seconds % 3600) // 60)
+            if hours > 0:
+                return True, f"{hours} ঘণ্টা {minutes} মিনিট"
+            else:
+                return True, f"{minutes} মিনিট"
+        else:
+            # সাজার মেয়াদ শেষ হলে অটোমেটিক রিলিজ
+            del asami_list[u_id]
+            save_json_file(ASAMI_DB, asami_list)
     return False, ""
 
 def get_badge(u_id):
@@ -125,7 +125,7 @@ def get_badge(u_id):
 
 # --- LOGIN GATEWAY ---
 if st.session_state.logged_in_user is None and not st.session_state.is_ceo:
-    st.markdown('<p class="main-title">অস্থির চালান PRO v42.0 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v43.0 🖥️⚡</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="notice-board">{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
     login_mode = st.radio("🔑 লগইন টাইপ সিলেক্ট করুন:", ["👤 সাধারণ মেম্বার পোর্টাল", "👑 সিইও সিকিউর পোর্টাল"], horizontal=True)
     
@@ -169,7 +169,7 @@ else:
     c1.markdown(f'**ACTIVE NODE:** {current_user_id.upper()}')
     if c2.button("লগআউট 🚪"): st.session_state.logged_in_user = None; st.session_state.is_ceo = False; st.rerun()
 
-    # অ্যাক্টিভ মেম্বারদের জন্য লাইভ লক স্ট্যাটাস চেক
+    # কারেন্ট মেম্বার লকড কি না চেক করুন
     is_current_user_locked, remaining_lock_time = check_user_lock(current_user_id)
 
     engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5 = st.tabs([
@@ -187,7 +187,7 @@ else:
         if is_current_user_locked:
             st.markdown(f"""
             <div class="lock-box">
-                ❌ অ্যাক্সেস ডিনাইড! সিইও রিয়াদ ভাই আপনাকে লক মেরেছেন। <br>
+                ❌ অ্যাক্সেস ডিনাইড! সিইও রিয়াদ ভাই আপনার এই ইঞ্জিনটি লক করেছেন। <br>
                 ⚖️ অপরাধের কারণ: {asami_list[current_user_id].get('crime')}<br>
                 ⏳ আপনার সাজার মেয়াদ আরও {remaining_lock_time} বাকি আছে! চ্যাট রুমে গিয়ে মাফি চান। 🫡
             </div>
@@ -284,7 +284,7 @@ else:
                 "Wedding Photographers & Videographers", "Custom (নিচে নিজের মতো করে লিখুন)"
             ])
             inst_query = st.text_input("🔍 কাস্টম বায়ার নিশ/ক্যাটাগরি টাইপ করুন:") if target_category == "Custom (নিচে নিজের মতো করে লিখুন)" else target_category
-            user_service = st.text_input("💼 আপনার নিজের সার্ভিস/দক্ষতার নাম (যেমন: Video Editing):", key="service_v42")
+            user_service = st.text_input("💼 আপনার নিজের সার্ভিস/দক্ষতার নাম (যেমন: Video Editing):", key="service_v43")
             
             generated_pitch_text = ""
             if user_service.strip() and inst_query.strip():
@@ -305,7 +305,7 @@ else:
                 encoded_q = urllib.parse.quote(final_google_query)
                 st.markdown(f'<a href="https://www.google.com/search?q={encoded_q}" target="_blank"><button style="background-color:#4285F4; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%;">🎯 গুগল এক্স-রে ফিল্টার ওপেন করুন</button></a>', unsafe_allow_html=True)
 
-    # --- TAB 3: CYBER MESSENGER & QUICK DM (আসামি হলেও মেসেজ করতে পারবে) ---
+    # --- TAB 3: CYBER MESSENGER & QUICK DM (আসামি হলেও চ্যাট করতে পারবে) ---
     with engine_tab3:
         chat_sub1, chat_sub2 = st.tabs(["🔊 Global Public Chat Room", "🔒 Secret 1:1 Personal DM Portal"])
         with chat_sub1:
@@ -323,7 +323,7 @@ else:
                     chat_html += f'<div class="{msg_class}"><b>{sender_display}:</b> {msg.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{msg.get("time","")}</small></div>'
                 st.markdown(chat_html + '</div>', unsafe_allow_html=True)
                 
-                with st.form("pub_chat_v42", clear_on_submit=True):
+                with st.form("pub_chat_v43", clear_on_submit=True):
                     t_msg = st.text_input("মেসেজ লিখুন:")
                     if st.form_submit_button("পাঠান ✉️") and t_msg.strip():
                         sender_identity = "CEO 👑" if is_ceo_active else current_user_id
@@ -340,33 +340,38 @@ else:
                             st.info("🔒 সিক্রেট ডিএম লোড হয়েছে! পাশের ট্যাবে যান।")
         
         with chat_sub2:
-            st.markdown("#### 🔒 ওয়ান-টু-وان সিক্রেট ইনবক্স")
+            st.markdown("#### 🔒 ওয়ান-টু-ওয়ান সিক্রেট ইনবক্স")
             all_users_list = [u for u in users.keys() if u != current_user_id]
             default_index = all_users_list.index(st.session_state.active_dm_user) if st.session_state.active_dm_user in all_users_list else 0
-            target_dm = st.selectbox("মেম্বার সিলেক্ট করুন:", options=all_users_list, index=default_index)
-            
-            if target_dm:
-                st.session_state.active_dm_user = target_dm
-                dm_html = '<div class="chat-box">'
-                filtered_dms = [d for d in dm_messages if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == target_dm) or (d.get("sender") == target_dm and d.get("receiver") == current_user_id))]
-                for dm in filtered_dms:
-                    dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else users.get(dm.get("sender"), {}).get("name", dm.get("sender"))
-                    dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
-                    dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{dm.get("time","")}</small></div>'
-                st.markdown(dm_html + '</div>', unsafe_allow_html=True)
+            if all_users_list:
+                target_dm = st.selectbox("মেম্বার সিলেক্ট করুন:", options=all_users_list, index=default_index)
                 
-                with st.form("dm_form_v42", clear_on_submit=True):
-                    t_dm = st.text_input("গোপন মেসেজ লিখুন:")
-                    if st.form_submit_button("ডিএম পাঠান 🔐") and t_dm.strip():
-                        sender_identity = "CEO 👑" if is_ceo_active else current_user_id
-                        dm_messages.append({"sender": sender_identity, "receiver": target_dm, "text": t_dm.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
-                        save_json_file(DM_DB, dm_messages); st.rerun()
+                if target_dm:
+                    st.session_state.active_dm_user = target_dm
+                    dm_html = '<div class="chat-box">'
+                    filtered_dms = [d for d in dm_messages if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == target_dm) or (d.get("sender") == target_dm and d.get("receiver") == current_user_id))]
+                    for dm in filtered_dms:
+                        dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else users.get(dm.get("sender"), {}).get("name", dm.get("sender"))
+                        dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
+                        dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{dm.get("time","")}</small></div>'
+                    st.markdown(dm_html + '</div>', unsafe_allow_html=True)
+                    
+                    with st.form("dm_form_v43", clear_on_submit=True):
+                        t_dm = st.text_input("গোপন মেসেজ লিখুন:")
+                        if st.form_submit_button("ডিএম পাঠান 🔐") and t_dm.strip():
+                            sender_identity = "CEO 👑" if is_ceo_active else current_user_id
+                            dm_messages.append({"sender": sender_identity, "receiver": target_dm, "text": t_dm.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
+                            save_json_file(DM_DB, dm_messages); st.rerun()
+            else:
+                st.info("কোনো অতিরিক্ত মেম্বার এখনো রেজিস্টার্ড নেই।")
 
     # --- TAB 4: PUBLIC ASAMI BOARD ---
     with engine_tab4:
         st.markdown("<h2 style='color:#EF4444; font-family:Hind Siliguri;'>🚨 অস্থির চালান - ডিজিটাল সাইবার থানা ও আসামি বোর্ড 🚓</h2>", unsafe_allow_html=True)
         if asami_list:
-            for a_id, a_info in asami_list.items():
+            for a_id, a_info in list(asami_list.items()):
+                # লাইভ ভ্যালিডেশন যাতে এক্সপায়ার্ড আসামি বোর্ডে না দেখায়
+                is_locked, _ = check_user_lock(a_id)
                 a_name = users.get(a_id, {}).get("name", a_id)
                 st.markdown(f"""
                 <div class="asami-card">
@@ -378,7 +383,7 @@ else:
                 """, unsafe_allow_html=True)
         else: st.info("🕊️ ড্যাশবোর্ডে এখন কোনো আসামি নেই!")
 
-    # --- TAB 5: CEO SECRET CONTROL ROOM (কাস্টম লক অপশনসহ) ---
+    # --- TAB 5: CEO SECRET CONTROL ROOM ---
     with engine_tab5:
         st.subheader("👑 Riad Bhai's Secret Control Room")
         if is_ceo_active:
@@ -386,28 +391,30 @@ else:
             c_col1, c_col2 = st.columns(2)
             with c_col1:
                 st.markdown("#### ⚖️ নতুন আসামি গ্রেপ্তার ও কাস্টম লক সেট করুন:")
-                target_suspect = st.selectbox("কাকে আসামি বানাবেন?", options=list(users.keys()), key="suspect_box_v42")
-                crime_note = st.text_input("অপরাধ বা ট্রোলের কারণ লিখুন:")
-                
-                # কাস্টম লক ডে ইনপুট বক্স
-                lock_days = st.number_input("🔒 কতদিনের জন্য স্ক্র্যাপার লক করবেন? (Days):", min_value=1, max_value=30, value=2)
-                
-                if st.button("🔨 রায় ঘোষণা করুন", use_container_width=True):
-                    if crime_note.strip():
-                        # কারেন্ট টাইম থেকে ফিউচার লক এক্সপায়ারি ক্যালকুলেশন
-                        future_date = datetime.datetime.now() + datetime.timedelta(days=int(lock_days))
-                        lock_until_str = future_date.strftime("%Y-%m-%d %H:%M:%S")
-                        
-                        asami_list[target_suspect] = {
-                            "crime": crime_note.strip(), 
-                            "duration": str(lock_days),
-                            "lock_until": lock_until_str,
-                            "judge": "MD Reyadh [CEO 👑]", 
-                            "date": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
-                        }
-                        save_json_file(ASAMI_DB, asami_list)
-                        st.success(f"🚓 সফলভাবে লকআপে চালান হয়েছে! {lock_days} দিন স্ক্র্যাপার ব্লক থাকবে।")
-                        time.sleep(0.5); st.rerun()
+                all_users_avail = list(users.keys())
+                if all_users_avail:
+                    target_suspect = st.selectbox("কাকে আসামি বানাবেন?", options=all_users_avail, key="suspect_box_v43")
+                    crime_note = st.text_input("অপরাধ বা ট্রোলের কারণ লিখুন:")
+                    lock_days = st.number_input("🔒 কতদিনের জন্য স্ক্র্যাপার লক করবেন? (Days):", min_value=1, max_value=30, value=2)
+                    
+                    if st.button("🔨 রায় ঘোষণা করুন", use_container_width=True):
+                        if crime_note.strip():
+                            # বুলেপ্রুফ টাইমস্ট্যাম্প লজিক: বর্তমানের Epoch টাইমের সাথে দিন যোগ করা
+                            seconds_to_add = int(lock_days) * 86400
+                            future_ts = time.time() + seconds_to_add
+                            
+                            asami_list[target_suspect] = {
+                                "crime": crime_note.strip(), 
+                                "duration": str(lock_days),
+                                "lock_until_ts": future_ts,
+                                "judge": "MD Reyadh [CEO 👑]", 
+                                "date": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
+                            }
+                            save_json_file(ASAMI_DB, asami_list)
+                            st.success(f"🚓 সফলভাবে লকআপে চালান হয়েছে! {lock_days} দিন স্ক্র্যাপার ব্লক থাকবে।")
+                            time.sleep(0.5); st.rerun()
+                else:
+                    st.warning("কোনো মেম্বার অ্যাকাউন্ট এখনো তৈরি হয়নি।")
             with c_col2:
                 st.markdown("#### 🕊️ আসামি খালাস করুন:")
                 if asami_list:
@@ -418,6 +425,8 @@ else:
                             save_json_file(ASAMI_DB, asami_list)
                             st.success("মুক্ত ও আনলক করা হয়েছে!")
                         time.sleep(0.5); st.rerun()
+                else:
+                    st.info("জেলে কোনো আসামি নেই।")
             st.markdown("---")
             new_notice = st.text_area("মেইন পেজের নোটিশ:", value=config.get("notice_text", ""))
             new_pin = st.text_input("২-ডিজিট মাস্টার পিন:", value=config.get("master_pin", "69"), max_chars=2)
@@ -426,4 +435,4 @@ else:
                 save_json_file(CONFIG_FILE, config); st.success("✅ ডান!")
         else: st.error("🔒 এই সেকশনটি শুধুমাত্র মেইন সিইও পোর্টাল দিয়ে এক্সেস করা যাবে।")
 
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v42.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v43.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
