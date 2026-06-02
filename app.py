@@ -146,7 +146,7 @@ else:
 
     engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5 = st.tabs([
         "📍 Google Maps Scraper & Mail Engine", 
-        "📸 Instagram Unlimited Hunter (Ultra UX)", 
+        "📸 Instagram AI Global Hunter", 
         "💬 Cyber Messenger & Video Call",
         "📩 Anonymous Complaint & Suggestion Box",
         "👑 CEO Secret Control Room"
@@ -275,7 +275,7 @@ else:
                                 s_count += 1
                                 st.session_state.daily_mail_count += 1
                                 d_time = random.randint(4, 8)
-                                st.caption(f"✓ {lead['Name']} (`{lead['Email']}`) এর ইনবক্সে সরাসরি মেইল ডেলিভারড! Anti-Spam বিরতি: {d_time} সেকেন্ড...")
+                                st.caption(f"✓ {lead['Name']} (`{lead['Email']}`) এর ইনবক্সে সরাসরি মেইল ডেলিভারড! Anti-Spam বিরতি: {d_time}衔... ")
                                 time.sleep(d_time)
                                 p_bar.progress((idx + 1) / len(st.session_state.current_leads))
                             
@@ -286,69 +286,94 @@ else:
                         except Exception as e:
                             st.error(f"❌ জিমেইল সার্ভার কানেকশন এরর: {str(e)}. অ্যাপ পাসওয়ার্ড বা মেইল আইডি পুনরায় চেক করুন!")
 
-    # --- TAB 2: INSTAGRAM HUNTER ENGINE (INTERNATIONAL UX & BUG FIXED) ---
+    # --- TAB 2: INSTAGRAM AI GLOBAL HUNTER (DYNAMIC SMART APPROACH) ---
     with engine_tab2:
-        st.markdown("<h2 style='color:#00FF66; font-family:Hind Siliguri;'>📸 ইনস্টাগ্রাম আনলিমিটেড গ্লোবাল হান্টিং প্যানেল (USA, UK & Top Countries)</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='color:#A5B4FC;'>মেম্বারদের জন্য সুখবর: কোনো পেইড এপিআই ছাড়াই এখন সরাসরি USA, UK, Canada ও Australia-র প্রিমিয়াম বায়ার ফিল্টার করতে পারবেন।</p>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#00FF66; font-family:Hind Siliguri;'>📸 ইনস্টাগ্রাম আনলিমিটেড AI গ্লোবাল হান্টার (Top Freelancing Countries)</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#A5B4FC;'>মেম্বারদের জন্য মেগা আপডেট: আপনার নির্দিষ্ট সার্ভিসের ওপর ভিত্তি করে সিস্টেম স্বয়ংক্রিয়ভাবে একটি ইউনিক হাই-কনভার্টিং কোল্ড পিচ মেক করবে।</p>", unsafe_allow_html=True)
         st.write("---")
 
         ui_col1, ui_col2 = st.columns([2, 3])
         with ui_col1:
+            # ১. টপ কান্ট্রি লিস্ট (বাংলাদেশ ও ফালতু দেশ বাদ)
             target_country = st.selectbox(
-                "🌐 টার্গেট বায়ার কান্ট্রি (Target Country):", 
-                options=["United States (USA)", "United Kingdom (UK)", "Canada", "Australia", "Worldwide (Global)"]
+                "🌐 টার্গেট বায়ার কান্ট্রি (Top Countries Only):", 
+                options=["United States (USA)", "United Kingdom (UK)", "Canada", "Australia"]
             )
             
-            inst_query = st.text_input("🔍 টার্গেট নিশ বা কিওয়ার্ড লিখুন:", value=st.session_state.insta_query_saved, placeholder="যেমন: wedding photographer")
+            # ২. বায়ারের নিশ (যেমন: real estate, fitness coach, bride)
+            inst_query = st.text_input("🔍 বায়ারের ক্যাটাগরি/নিশ লিখুন:", value=st.session_state.insta_query_saved, placeholder="যেমন: Real Estate Agent, Fitness Coach, Restaurant")
             
-            default_pitch = "Hey, your wedding portfolio looks absolutely stunning! 📸 We specialize in ultra-fast premium video editing and color grading. Can I drop a quick 30-second link to our work sample?"
-            short_pitch = st.text_area("✍️ মেম্বারদের জন্য কিলার পিচ টেক্সট সেট করুন:", value=default_pitch, height=120)
+            # ৩. ইউজার তার নিজের সার্ভিস এখানে লিখবে
+            user_service = st.text_input("💼 আপনার সার্ভিস বা দক্ষতার নাম লিখুন:", placeholder="যেমন: Premium Video Editing, Lead Generation, Web Development")
+            
+            # ৪. ব্যাকএন্ড AI জেনারেটর ইঞ্জিন লজিক
+            generated_pitch_text = ""
+            if user_service.strip() and inst_query.strip():
+                # সার্ভিসের ওপর ডিপেন্ড করে রিয়েল টাইম ডাইনামিক হুক মেকিং
+                service_lower = user_service.lower()
+                if "video" in service_lower or "editing" in service_lower or "reel" in service_lower:
+                    hook = f"I was scrolling through your feed and love your content! 🎬 We specialize in ultra-fast {user_service} designed to boost retention and keep your audience hooked."
+                elif "web" in service_lower or "dev" in service_lower or "design" in service_lower:
+                    hook = f"I stumbled upon your profile and noticed some amazing scaling opportunities. 💻 We craft high-converting systems specifically via premium {user_service}."
+                elif "lead" in service_lower or "marketing" in service_lower or "seo" in service_lower:
+                    hook = f"Love what you're doing in the industry! 📈 We focus on automated user-acquisition using advanced {user_service} to skyrocket sales."
+                else:
+                    hook = f"Your brand caught my eye! 🚀 We provide high-end solutions using data-backed {user_service} tailored to businesses like yours."
+                
+                generated_pitch_text = f"Hey! {hook} Quick question—are you currently open to reviewing a 30-second video sample showing how we double your output without heavy costs? Let me know!"
+            else:
+                generated_pitch_text = "Hey! Love your profile and what you're building. 🚀 We provide high-end remote services to scale your operations. Are you open to a quick 30-second proposal or portfolio link? Let me know!"
+
+            st.markdown("<b style='color:#38BDF8;'>🤖 AI জেনারেটেড কিলার পিচ (নিচে এডিট করে কাস্টমাইজ করতে পারবেন):</b>", unsafe_allow_html=True)
+            custom_pitch = st.text_area("✍️ পিচ মেসেজ মডিফায়ার:", value=generated_pitch_text, height=140)
             
             run_hunting = st.button("🚀 গ্লোবাল হান্টিং রাডার অ্যাক্টিভেট করুন", use_container_width=True)
             
             if run_hunting:
                 if not inst_query.strip():
-                    st.error("❌ অনুগ্রহ করে একটি নিশ কিওয়ার্ড দিন।")
+                    st.error("❌ অনুগ্রহ করে বায়ারের ক্যাটাগরি বা নিশ কিওয়ার্ড দিন।")
                 else:
                     st.session_state.insta_query_saved = inst_query.strip()
                     history_logs.append({
                         "user": current_user_id, 
-                        "engine": f"Instagram Global ({target_country})", 
+                        "engine": f"Instagram AI ({target_country})", 
                         "keyword": inst_query.strip(), 
                         "count": "Unlimited", 
                         "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
                     })
                     save_json_file(HISTORY_DB, history_logs)
-                    st.success(f"🎯 {target_country} রাডার সক্রিয় হয়েছে! ডানের প্যানেলটি দেখুন।")
+                    st.success(f"🎯 {target_country} AI রাডার সক্রিয় হয়েছে!")
 
         with ui_col2:
             if st.session_state.insta_query_saved:
                 st.markdown(f"""
                 <div class="target-box">
-                    <h3 style="color:#00FF66; margin-top:0;">🎯 International Client Control Panel</h3>
-                    <p style="color:#94A3B8; font-size:14px;"><b>সক্রিয় সার্চ নিশ:</b> <span style="color:#38BDF8; font-weight:bold;">{st.session_state.insta_query_saved}</span></p>
-                    <p style="color:#94A3B8; font-size:14px;"><b>টার্গেট লোকেশন:</b> <span style="color:#F43F5E; font-weight:bold;">{target_country}</span></p>
+                    <h3 style="color:#00FF66; margin-top:0;">🎯 AI Client Target Board</h3>
+                    <p style="color:#94A3B8; font-size:14px;"><b>টার্গেট বায়ার নিশ:</b> <span style="color:#38BDF8; font-weight:bold;">{st.session_state.insta_query_saved}</span></p>
+                    <p style="color:#94A3B8; font-size:14px;"><b>টার্গেট লোকেশন ফিল্টার:</b> <span style="color:#F43F5E; font-weight:bold;">{target_country}</span></p>
+                    <p style="color:#94A3B8; font-size:14px;"><b>আপনার মূল সার্ভিস:</b> <span style="color:#00FF66; font-weight:bold;">{user_service if user_service.strip() else 'General Scale'}</span></p>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                st.markdown("<p style='color:#00FF66; font-weight:bold; margin-top:15px;'>👉 ক্লায়েন্ট হান্ট করার ৩ সেকেন্ডের ম্যাজিক নিয়ম:</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color:#00FF66; font-weight:bold; margin-top:15px;'>👉 বায়ার হান্ট করার ৩ সেকেন্ডের ম্যাজিক নিয়ম:</p>", unsafe_allow_html=True)
                 
                 st.markdown("""
-                <div class="step-card"><b>ধাপ ১:</b> নিচের বক্সের টেক্সটটি কপি করে নিন (ডান কোণায় মাউস নিলে ছোট কপি বাটন পাবেন)।</div>
+                <div class="step-card"><b>ধাপ ১:</b> নিচের বক্সের ডানদিকের কপি আইকনে ক্লিক করে মেসেজটি কিবোর্ডে নিয়ে নিন।</div>
                 """, unsafe_allow_html=True)
                 
-                # Fixed bug using st.code instead of st.copy_to_clipboard to prevent Streamlit Cloud crashes
-                st.code(short_pitch, language="text")
+                # Streamlit-এর স্ট্যান্ডার্ড এবং ক্র্যাশ-ফ্রি ওয়ান-ক্লিক কপি ব্লক
+                st.code(custom_pitch, language="text")
                 
                 st.markdown("""
-                <div class="step-card" style="margin-top:15px;"><b>ধাপ ২:</b> এবার নিচের বাটন থেকে ইন্টারন্যাশনাল বায়ার ডিরেক্টরি ওপেন করুন।</div>
+                <div class="step-card" style="margin-top:15px;"><b>ধাপ ২:</b> নিচের যেকোনো মেথড বাটনে চাপ দিয়ে সরাসরি বিদেশি বায়ারদের ফিল্টার লিস্ট ওপেন করুন।</div>
                 """, unsafe_allow_html=True)
                 
+                # দেশের ওপর ভিত্তি করে গুগলের এক্স-রে সার্চ মডিফাই করা (সব টপ দেশ)
                 country_suffix = ""
-                if "USA" in target_country: country_suffix = " AND (NY OR LA OR California OR Texas OR USA)"
-                elif "UK" in target_country: country_suffix = " AND (London OR UK OR Manchester)"
-                elif "Canada" in target_country: country_suffix = " AND (Toronto OR Vancouver OR Canada)"
-                elif "Australia" in target_country: country_suffix = " AND (Sydney OR Melbourne OR Australia)"
+                if "USA" in target_country: country_suffix = " AND (NY OR LA OR California OR Texas OR Miami OR USA)"
+                elif "UK" in target_country: country_suffix = " AND (London OR UK OR Manchester OR Birmingham)"
+                elif "Canada" in target_country: country_suffix = " AND (Toronto OR Vancouver OR Montreal OR Canada)"
+                elif "Australia" in target_country: country_suffix = " AND (Sydney OR Melbourne OR Brisbane OR Australia)"
                 
                 raw_q = st.session_state.insta_query_saved
                 final_google_query = f'site:instagram.com "{raw_q}"{country_suffix}'
@@ -362,20 +387,20 @@ else:
                 
                 btn_col1, btn_col2 = st.columns(2)
                 with btn_col1:
-                    st.markdown(f'<a href="{people_search_url}" target="_blank"><button style="background-color:#E1306C; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(225,48,108,0.3);">⚡ মেথড ১: ওপেন {target_country} নিশ ফিড 📸</button></a>', unsafe_allow_html=True)
-                    st.caption(f"ঐ দেশের নির্দিষ্ট #{hashtag_format} ট্যাগ ব্যবহারকারী বায়ারদের পোস্ট আসবে।")
+                    st.markdown(f'<a href="{people_search_url}" target="_blank"><button style="background-color:#E1306C; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(225,48,108,0.3);">⚡ মেথড ১: {target_country} নিশ ফিড 📸</button></a>', unsafe_allow_html=True)
+                    st.caption(f"রিসেন্ট পোস্ট করা বায়ার দেখতে।")
                     
                 with btn_col2:
-                    st.markdown(f'<a href="{web_search_url}" target="_blank"><button style="background-color:#4285F4; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(66,133,244,0.3);">⚡ মেথড ২: গুগল এক্স-রে বায়ার ফিল্টার 🎯</button></a>', unsafe_allow_html=True)
-                    st.caption(f"শুধুমাত্র {target_country}-এর যেসকল আইডির বায়োতে এই কিওয়ার্ড আছে তাদের লিস্ট আসবে।")
+                    st.markdown(f'<a href="{web_search_url}" target="_blank"><button style="background-color:#4285F4; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(66,133,244,0.3);">⚡ মেথড ২: গুগল এক্স-রে ফিল্টার 🎯</button></a>', unsafe_allow_html=True)
+                    st.caption(f"শুধুমাত্র বায়োতে কিওয়ার্ড থাকা প্রিমিয়াম বায়ারদের আইডি পেতে।")
                 
                 st.markdown("""
                 <div class="step-card" style="background-color:#064E3B; border-color:#10B981; margin-top:15px;">
-                <b>ধাপ ৩:</b> বায়ারের প্রোফাইলে গিয়ে মেসেজ (Message) বক্সে মাউস রেখে জাস্ট <b>Ctrl + V</b> চেপে পেস্ট করে দিন এবং সেন্ড করুন! কোনো রিজিওনাল বা লোকাল আইডি আসবে না, সব প্রিমিয়াম বায়ার। 🔥
+                <b>ধাপ ৩:</b> বায়ারের প্রোফাইলে যান এবং জাস্ট <b>Ctrl + V</b> চেপে পেস্ট করে ফায়ার দিন! কাস্টম বা অটো জেনারেটেড মেসেজ নিমিষেই সেন্ড ডান। 🚀
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.info("💡 বাম পাশের বক্সে আপনার টার্গেট দেশ ও নিশ কিওয়ার্ড লিখে 'গ্লোবাল হান্টিং রাডার অ্যাক্টিভেট করুন' বাটনে চাপ দিন।")
+                st.info("💡 বাম পাশে টার্গেট দেশ সিলেক্ট করে, আপনার সার্ভিস এবং বায়ার ক্যাটাগরি লিখে রাডার অন করুন। এখানে ম্যাজিক প্যানেল অন হবে।")
 
     # --- TAB 3: CYBER MESSENGER & HQ VIDEO CALL ---
     with engine_tab3:
