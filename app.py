@@ -56,7 +56,7 @@ dm_messages = st.session_state.dm_cache
 announcements = st.session_state.announce_cache
 complaints = st.session_state.complaint_cache
 
-st.set_page_config(page_title="অস্থির চালান PRO v34.0 🖥️⚡", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v35.0 🖥️⚡", page_icon="🥷", layout="wide")
 
 # --- CUSTOM CSS UI ---
 st.markdown("""
@@ -92,7 +92,7 @@ def get_badge(u_id):
 
 # --- LOGIN / REGISTRATION GATEWAY ---
 if st.session_state.logged_in_user is None:
-    st.markdown('<p class="main-title">অস্থির চালান PRO v34.0 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v35.0 🖥️⚡</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="notice-board">{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -147,7 +147,7 @@ else:
         "👑 CEO Secret Control Room"
     ])
 
-    # --- TAB 1: GOOGLE MAPS LIVE API (FIXED - NO FAKE DATA) ---
+    # --- TAB 1: GOOGLE MAPS LIVE API & FIXED SMTP MAIL INJECTOR ---
     with engine_tab1:
         st.subheader("📍 Google Maps Live Scraping & Smart Variable Mailer")
         
@@ -168,7 +168,6 @@ else:
                 st.error("❌ সার্চ কিওয়ার্ড খালি রাখা যাবে না।")
             else:
                 with st.spinner("গুগল ম্যাপসের লাইভ সার্ভার থেকে ১০০% রিয়েল ডাটা স্ক্র্যাপ হচ্ছে..."):
-                    # SERPAPI GOOGLE MAPS ACTUAL API CALL
                     serp_url = "https://serpapi.com/search.json"
                     params = {
                         "engine": "google_maps",
@@ -191,7 +190,6 @@ else:
                                     phone = item.get("phone", "None")
                                     website = item.get("website", "None")
                                     
-                                    # ম্যাপসে সরাসরি ইমেল থাকে না, তাই ডোমেইন থেকে ইমেল ক্রিয়েট বা ব্ল্যাংক রাখা হয়
                                     raw_domain = website.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0] if website != "None" else ""
                                     generated_email = f"info@{raw_domain}" if raw_domain else "None"
                                     
@@ -207,7 +205,7 @@ else:
                                 st.error("❌ গুগলে এই কিওয়ার্ডের কোনো বিজনেস খুঁজে পাওয়া যায়নি অথবা আপনার এপিআই কি-র ফ্রি লিমিট শেষ।")
                                 st.session_state.current_leads = []
                         else:
-                            st.error(f"❌ SerpApi কানেকশন রিজেক্টেড! স্ট্যাটাস কোড: {res.status_code}. কি-টা রি-চেক করুন।")
+                            st.error(f"❌ SerpApi কানেকশন রিজেক্টেড! স্ট্যাটাস কোড: {res.status_code}.")
                             st.session_state.current_leads = []
                     except Exception as e:
                         st.error(f"❌ গুগল ম্যাপস এপিআই টাইমআউট এরর: {str(e)}")
@@ -229,60 +227,68 @@ else:
             my_role = v_col2.text_input("👑 Your Designation/Title:", value="CEO & Founder")
             
             v_col3, v_col4 = st.columns(2)
-            outreach_reason = v_col3.text_input("🎯 Reason for Outreach:", value="I found a massive loop on your website Google ranking")
-            services_offered = v_col4.text_area("⚡ Services Offered (Comma separated):", value="Lead Generation, Cold Email Marketing, SEO Optimization")
+            outreach_reason = v_col3.text_input("🎯 Reason for Outreach:", value="I absolutely love your wedding portfolio and want to help you clear your heavy editing backlog this season.")
+            services_offered = v_col4.text_area("⚡ Services Offered (Comma separated):", value="Cinematic Wedding Highlights, Full-Length Documentary Video Editing, RAW Photo Culling & Color Correction, Premium Lightroom Color Grading, Reels & Shorts Editing")
             
             st.markdown("#### ⚙️ SMTP Authenticator Connection")
             smtp_server = st.text_input("SMTP Server:", value="smtp.gmail.com")
             smtp_port = st.number_input("SMTP Port:", value=587)
             sender_email = st.text_input("আপনার ইমেইল (Sender Email):", value=users[current_user_id].get("connected_email", ""))
-            sender_password = st.text_input("অ্যাপ পাসওয়ার্ড (App Password):", type="password")
+            sender_password = st.text_input("অ্যাপ পাসওয়ার্ড (App Password - ১৬ ডিজিটের সিক্রেট কোড):", type="password")
             
             st.write(f"📊 **আজকের সেন্ট মেইল কাউন্টার:** `{st.session_state.daily_mail_count} / 100`")
             
             if st.session_state.daily_mail_count >= 100 or st.session_state.mail_lock:
                 st.session_state.mail_lock = True
                 st.error("🚨 সিকিউরিটি এলার্ট: ১০০টি মেইলের লিমিট শেষ! আইডি ব্যান হওয়া রুখতে সিস্টেম লক করা হয়েছে।")
-                
-                new_email_connect = st.text_input("নতুন ইমেইল আইডি:")
-                new_pass_connect = st.text_input("নতুন অ্যাপ পাসওয়ার্ড:", type="password")
-                if st.button("সিস্টেম রি-অ্যাক্টিভেট ও আনলক করুন 🔓"):
-                    if new_email_connect and new_pass_connect:
-                        users[current_user_id]["connected_email"] = new_email_connect
-                        save_json_file(USER_DB, users)
-                        st.session_state.daily_mail_count = 0
-                        st.session_state.mail_lock = False
-                        st.success("✅ কাউন্টার রিলিজ হয়েছে! নতুন মেইল সাকসেসফুলি কানেক্টেড।")
-                        time.sleep(1); st.rerun()
             else:
                 if st.button("১-ক্লিকে স্মার্ট কোল্ড মেইল পাঠান 🚀"):
-                    if not sender_email or not sender_password: st.error("❌ মেইল এবং অ্যাপ পাসওয়ার্ড দুটিই আবশ্যক।")
+                    if not sender_email or not sender_password: 
+                        st.error("❌ মেইল এবং ১৬ ডিজিটের অ্যাপ পাসওয়ার্ড দুটিই আবশ্যক।")
                     else:
                         s_count = 0
                         p_bar = st.progress(0)
-                        for idx, lead in enumerate(st.session_state.current_leads):
-                            if lead['Email'] == "None": continue
-                            if st.session_state.daily_mail_count >= 100:
-                                st.session_state.mail_lock = True
-                                st.rerun(); break
+                        
+                        # SMTP LIVE SERVER INITIALIZATION (FIXED CORE)
+                        try:
+                            server = smtplib.SMTP(smtp_server, int(smtp_port))
+                            server.starttls()
+                            server.login(sender_email, sender_password.strip().replace(" ", ""))
                             
-                            mail_body = f"Hello {lead['Name']},\n\nI am writing to you because {outreach_reason}.\n\nWe specialize in maximizing business value and we can assist you with:\n{services_offered}.\n\nLooking forward to your positive response.\n\nBest Regards,\n{user_real_name}\n{my_role}\n{my_company}"
-                            try:
+                            for idx, lead in enumerate(st.session_state.current_leads):
+                                if lead['Email'] == "None" or "@" not in lead['Email']: 
+                                    continue
+                                if st.session_state.daily_mail_count >= 100:
+                                    st.session_state.mail_lock = True
+                                    break
+                                
+                                # BULLETPROOF DYNAMIC MAIL COMPOSITION
+                                mail_body = f"Hello {lead['Name']},\n\nI am writing to you because {outreach_reason}.\n\nWe specialize in maximizing production speed and we can assist you with:\n\n{services_offered}\n\nLooking forward to your positive response.\n\nBest Regards,\n{user_real_name}\n{my_role}\n{my_company}"
+                                
                                 msg = MIMEMultipart()
                                 msg['From'] = sender_email
                                 msg['To'] = lead['Email']
-                                msg['Subject'] = f"Exclusive Proposal for {lead['Name']}"
+                                msg['Subject'] = f"Exclusive Video Production Editing Proposal for {lead['Name']}"
                                 msg.attach(MIMEText(mail_body, 'plain'))
+                                
+                                # DIRECT INTERNET SHOT TRIGGER
+                                server.sendmail(sender_email, lead['Email'], msg.as_string())
+                                
                                 s_count += 1
                                 st.session_state.daily_mail_count += 1
-                                d_time = random.randint(3, 7)
-                                st.caption(f"✓ {lead['Name']} কে পার্সোনালাইজড মেইল পাঠানো হয়েছে। Anti-Ban সেফটির জন্য {d_time} সেকেন্ড বিরতি...")
+                                d_time = random.randint(4, 8)
+                                st.caption(f"✓ {lead['Name']} (`{lead['Email']}`) এর ইনবক্সে সরাসরি মেইল ডেলিভারড! Anti-Spam বিরতি: {d_time} সেকেন্ড...")
                                 time.sleep(d_time)
-                            except Exception as e: st.error(f"Error sending to {lead['Name']}: {str(e)}")
-                            p_bar.progress((idx + 1) / len(st.session_state.current_leads))
-                        st.success(f"🔥 ক্যাম্পেইন সফল! মোট {s_count}টি স্মার্ট মেইল ডেলিভারড।")
+                                p_bar.progress((idx + 1) / len(st.session_state.current_leads))
+                            
+                            server.quit() # CLOSING LIVE PORT Safely
+                            st.success(f"🔥 ক্যাম্পেইন সফল! মোট {s_count}টি আসল পার্সোনালাইজড মেইল লাইভ সার্ভার দিয়ে পাঠানো হয়েছে।")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ জিমেইল সার্ভার কানেকশন এরর: {str(e)}. অ্যাপ পাসওয়ার্ড বা মেইল আইডি পুনরায় চেক করুন!")
 
-    # --- TAB 2: INSTAGRAM HUNTER ENGINE (FIXED LIVE API) ---
+    # --- TAB 2: INSTAGRAM HUNTER ENGINE ---
     with engine_tab2:
         st.subheader("📸 Instagram Live Target Hunting Engine (Option A - Personal API)")
         
@@ -505,7 +511,7 @@ else:
                 new_badge = st.selectbox("নতুন ব্যাজ বা একটিভিটি লেভেল সেট করুন:", options=["None", "Blue Tick 🔵", "Always Active 🔥", "Low Active 💤"])
                 mod_checkbox = st.checkbox("এই মেম্বারকে ড্যাশবোর্ডের মডারেটর (Moderator) বানান 🛠️", value=m_data.get("is_moderator", False))
                 
-                if st.button("মেম্বার প্রোফাইল আপডেট করুন ⚙️"):
+                if st.button("মেম্বার প্রোфাইল আপডেট করুন ⚙️"):
                     users[selected_member]["badge"] = new_badge
                     users[selected_member]["is_moderator"] = mod_checkbox
                     save_json_file(USER_DB, users)
@@ -532,7 +538,7 @@ else:
                     if st.button(f"রিপ্লাই পাঠান", key=f"btn_rep_{c.get('id')}"):
                         complaints[idx]["reply"] = rep_input.strip()
                         save_json_file(COMPLAINT_DB, complaints)
-                        st.success("✅ রিপ্লাই পাঠানো হয়েছে।")
+                        st.success("✅举报 রিপ্লাই পাঠানো হয়েছে।")
                         time.sleep(0.5); st.rerun()
 
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v34.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v35.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
