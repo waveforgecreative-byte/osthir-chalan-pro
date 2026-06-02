@@ -66,6 +66,11 @@ st.markdown("""
     .main-title { font-family: 'Hind Siliguri', sans-serif !important; font-size: 38px !important; font-weight: 700 !important; color: #00FF66 !important; text-shadow: 0 0 10px #00FF66; }
     .welcome-banner { background: linear-gradient(90deg, #0F172A, #1E293B); border-left: 5px solid #00FF66; padding: 18px; border-radius: 10px; font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #FFFFFF; font-family: 'Hind Siliguri', sans-serif; }
     .notice-board { background-color: #0F172A; border-left: 4px solid #38BDF8; padding: 15px; border-radius: 8px; margin-bottom: 25px; color: #F1F5F9; }
+    
+    /* Premium Instagram Section UI */
+    .target-box { background-color: #0F172A; border: 1px solid #1E293B; padding: 20px; border-radius: 12px; margin-top: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .step-card { background: #111827; border: 1px solid #374151; padding: 12px; border-radius: 8px; margin-bottom: 10px; color: #F3F4F6; }
+    
     .chat-box { height: 380px; overflow-y: auto; background: #090D16; border: 1px solid #1E293B; padding: 15px; border-radius: 8px; }
     .msg-incoming { background: #1E293B; color: #F1F5F9; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 80%; border-left: 3px solid #38BDF8; }
     .msg-outgoing { background: #0F2D1E; color: #00FF66; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; margin-left: auto; width: fit-content; max-width: 80%; border-right: 3px solid #00FF66; }
@@ -78,7 +83,7 @@ st.markdown("""
 
 if "logged_in_user" not in st.session_state: st.session_state.logged_in_user = None
 if "current_leads" not in st.session_state: st.session_state.current_leads = []
-if "insta_leads" not in st.session_state: st.session_state.insta_leads = []
+if "insta_query_saved" not in st.session_state: st.session_state.insta_query_saved = ""
 if "mail_lock" not in st.session_state: st.session_state.mail_lock = False
 if "daily_mail_count" not in st.session_state: st.session_state.daily_mail_count = 0
 
@@ -141,7 +146,7 @@ else:
 
     engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5 = st.tabs([
         "📍 Google Maps Scraper & Mail Engine", 
-        "📸 Instagram Hunter Engine", 
+        "📸 Instagram Unlimited Hunter (Ultra UX)", 
         "💬 Cyber Messenger & Video Call",
         "📩 Anonymous Complaint & Suggestion Box",
         "👑 CEO Secret Control Room"
@@ -194,10 +199,7 @@ else:
                                     generated_email = f"info@{raw_domain}" if raw_domain else "None"
                                     
                                     real_leads.append({
-                                        "Name": title,
-                                        "Email": generated_email,
-                                        "Phone": phone,
-                                        "Website": website
+                                        "Name": title, "Email": generated_email, "Phone": phone, "Website": website
                                     })
                                 st.session_state.current_leads = real_leads
                                 st.success(f"✅ গুগলের লাইভ সার্ভার থেকে {len(real_leads)}টি ১০০% আসল কাস্টমার লিড পাওয়া গেছে!")
@@ -249,20 +251,17 @@ else:
                         s_count = 0
                         p_bar = st.progress(0)
                         
-                        # SMTP LIVE SERVER INITIALIZATION (FIXED CORE)
                         try:
                             server = smtplib.SMTP(smtp_server, int(smtp_port))
                             server.starttls()
                             server.login(sender_email, sender_password.strip().replace(" ", ""))
                             
                             for idx, lead in enumerate(st.session_state.current_leads):
-                                if lead['Email'] == "None" or "@" not in lead['Email']: 
-                                    continue
+                                if lead['Email'] == "None" or "@" not in lead['Email']: continue
                                 if st.session_state.daily_mail_count >= 100:
                                     st.session_state.mail_lock = True
                                     break
                                 
-                                # BULLETPROOF DYNAMIC MAIL COMPOSITION
                                 mail_body = f"Hello {lead['Name']},\n\nI am writing to you because {outreach_reason}.\n\nWe specialize in maximizing production speed and we can assist you with:\n\n{services_offered}\n\nLooking forward to your positive response.\n\nBest Regards,\n{user_real_name}\n{my_role}\n{my_company}"
                                 
                                 msg = MIMEMultipart()
@@ -271,7 +270,6 @@ else:
                                 msg['Subject'] = f"Exclusive Video Production Editing Proposal for {lead['Name']}"
                                 msg.attach(MIMEText(mail_body, 'plain'))
                                 
-                                # DIRECT INTERNET SHOT TRIGGER
                                 server.sendmail(sender_email, lead['Email'], msg.as_string())
                                 
                                 s_count += 1
@@ -281,124 +279,81 @@ else:
                                 time.sleep(d_time)
                                 p_bar.progress((idx + 1) / len(st.session_state.current_leads))
                             
-                            server.quit() # CLOSING LIVE PORT Safely
+                            server.quit() 
                             st.success(f"🔥 ক্যাম্পেইন সফল! মোট {s_count}টি আসল পার্সোনালাইজড মেইল লাইভ সার্ভার দিয়ে পাঠানো হয়েছে।")
                             time.sleep(1)
                             st.rerun()
                         except Exception as e:
                             st.error(f"❌ জিমেইল সার্ভার কানেকশন এরর: {str(e)}. অ্যাপ পাসওয়ার্ড বা মেইল আইডি পুনরায় চেক করুন!")
 
-    # --- TAB 2: INSTAGRAM HUNTER ENGINE (OPTIMIZED WITH DYNAMIC MIXED SEARCH) ---
+    # --- TAB 2: INSTAGRAM HUNTER ENGINE (ULTRA USER-FRIENDLY INTERFACE) ---
     with engine_tab2:
-        st.subheader("📸 Instagram Live Target Hunting Engine")
-        
-        apify_token = st.text_input("🔑 আপনার Apify API Token সেট করুন (Apify > Settings > Integrations):", type="password", value=users[current_user_id].get("apify_api_key", ""))
-        if st.button("Apify Token সেভ করুন 💾", key="save_api_insta"):
-            users[current_user_id]["apify_api_key"] = apify_token.strip()
-            save_json_file(USER_DB, users)
-            st.success("Apify Token Successfully Logged!")
+        st.markdown("<h2 style='color:#00FF66; font-family:Hind Siliguri;'>📸 ইনস্টাগ্রাম আনলিমিটেড হান্টিং প্যানেল (Zero-API ওয়ান ক্লিক মোড)</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#A5B4FC;'>মেম্বারদের জন্য সুখ খবর: কোনো পেইড এপিআই বা টোকেন লাগবে না। ১০০% সেফ উপায়ে সরাসরি আসল ক্লায়েন্ট ফিল্টার হবে।</p>", unsafe_allow_html=True)
+        st.write("---")
 
-        inst_query = st.text_input("ইনস্টাগ্রাম টার্গেট নিশ বা কিওয়ার্ড (যেমন: wedding photographer):")
-        insta_limit = st.number_input("লিড সংখ্যা (সর্বোচ্চ ২০টি অনুমোদিত):", min_value=1, max_value=20, value=10)
-        interval_delay = st.slider("প্রতিটি মেসেজ লিংক জেনারেশন ডিলে (সেকেন্ড):", min_value=2, max_value=20, value=5)
-        
-        default_pitch = "Hey {Name}, your wedding portfolio is stunning! We specialize in wedding photo/video editing with ultra-fast turnaround. Can I send a quick link to our recent editing portfolio?"
-        short_pitch = st.text_area("ইনস্টাগ্রাম কিলার শর্ট হুক পিচ ({Name} দিন):", value=default_pitch)
-        
-        if st.button("ইনস্টাগ্রাম হান্টিং স্টার্ট করুন 🚀"):
-            if not apify_token: 
-                st.error("❌ অনুগ্রহ করে প্রথমে আপনার নিজের Apify API Tokenটি উপরে বসিয়ে সেভ করুন।")
-            elif not inst_query.strip(): 
-                st.error("❌ নিশ কিওয়ার্ড দিন।")
+        ui_col1, ui_col2 = st.columns([2, 3])
+        with ui_col1:
+            inst_query = st.text_input("🔍 টার্গেট নিশ বা কিওয়ার্ড লিখুন:", value=st.session_state.insta_query_saved, placeholder="যেমন: wedding photographer")
+            
+            default_pitch = "Hey, your wedding portfolio looks absolutely stunning! 📸 We specialize in ultra-fast premium video editing and color grading. Can I drop a quick 30-second link to our work sample?"
+            short_pitch = st.text_area("✍️ মেম্বারদের জন্য কিলার পিচ টেক্সট সেট করুন:", value=default_pitch, height=120)
+            
+            run_hunting = st.button("🚀 হান্টিং রাডার অ্যাক্টিভেট করুন", use_container_width=True)
+            
+            if run_hunting:
+                if not inst_query.strip():
+                    st.error("❌ অনুগ্রহ করে একটি নিশ কিওয়ার্ড দিন।")
+                else:
+                    st.session_state.insta_query_saved = inst_query.strip()
+                    history_logs.append({
+                        "user": current_user_id, "engine": "Instagram Ultra-UX", "keyword": inst_query.strip(), "count": "Unlimited", "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
+                    })
+                    save_json_file(HISTORY_DB, history_logs)
+                    st.success("🎯 রাডার সক্রিয় হয়েছে! ডানের প্যানেলটি দেখুন।")
+
+        with ui_col2:
+            if st.session_state.insta_query_saved:
+                st.markdown(f"""
+                <div class="target-box">
+                    <h3 style="color:#00FF66; margin-top:0;">🎯 Client Target Control Panel</h3>
+                    <p style="color:#94A3B8; font-size:14px;"><b>সক্রিয় সার্চ নিশ:</b> <span style="color:#38BDF8; font-weight:bold;">{st.session_state.insta_query_saved}</span></p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("<p style='color:#00FF66; font-weight:bold; margin-top:15px;'>👉 ক্লায়েন্ট হান্ট করার ৩ সেকেন্ডের ম্যাজিক নিয়ম:</p>", unsafe_allow_html=True)
+                
+                st.markdown("""
+                <div class="step-card"><b>ধাপ ১:</b> নিচের বাটনটিতে ক্লিক করে মেসেজটি আপনার পিসির কিবোর্ডে অটো-কপি করে নিন।</div>
+                """, unsafe_allow_html=True)
+                
+                st.copy_to_clipboard(short_pitch, before_text="📋 এখানে ক্লিক করে মেসেজটি কপি করুন ➔ ", after_text="✅ মেসেজ কপি হয়ে গেছে! এবার নিচের বাটনে যান।")
+                
+                st.markdown("""
+                <div class="step-card" style="margin-top:15px;"><b>ধাপ ২:</b> এবার নিচের যেকোনো একটি মেথড বাটনে ক্লিক করে বায়ারদের লাইভ ডিরেক্টরি ওপেন করুন।</div>
+                """, unsafe_allow_html=True)
+                
+                raw_q = st.session_state.insta_query_saved
+                encoded_q = urllib.parse.quote(raw_q)
+                people_search_url = f"https://www.instagram.com/explore/tags/{raw_q.replace(' ', '')}/"
+                web_search_url = f"https://www.google.com/search?q=site:instagram.com+%22{encoded_q}%22"
+                
+                btn_col1, btn_col2 = st.columns(2)
+                with btn_col1:
+                    st.markdown(f'<a href="{people_search_url}" target="_blank"><button style="background-color:#E1306C; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(225,48,108,0.3);">⚡ মেথড ১: ওপেন ইনস্টাগ্রাম নিশ ফিড 📸</button></a>', unsafe_allow_html=True)
+                    st.caption("কিওয়ার্ডের ওপর মানুষের রিসেন্ট পোস্ট ও আইডি দেখতে এটি ব্যবহার করুন।")
+                    
+                with btn_col2:
+                    st.markdown(f'<a href="{web_search_url}" target="_blank"><button style="background-color:#4285F4; color:white; padding:12px 15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(66,133,244,0.3);">⚡ মেথড ২: গুগল এক্স-রে বায়ার ফিল্টার 🎯</button></a>', unsafe_allow_html=True)
+                    st.caption("যাদের মূল বায়োতে (Bio) এই কিওয়ার্ডটি লেখা আছে শুধু তাদের আইডি আসবে।")
+                
+                st.markdown("""
+                <div class="step-card" style="background-color:#064E3B; border-color:#10B981; margin-top:15px;">
+                <b>ধাপ ৩:</b> বায়ারের প্রোফাইলে গিয়ে মেসেজ (Message) বক্সে মাউস রেখে জাস্ট <b>Ctrl + V</b> চেপে পেস্ট করে দিন এবং সেন্ড করুন! কোনো টাইপিং এর ঝামেলা ছাড়াই বায়ার নক ডান। 🔥
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                with st.spinner("Apify ক্লাউড সার্ভার থেকে লাইভ ইনস্টাগ্রাম ডেটা স্ক্রিপ্ট করা হচ্ছে..."):
-                    clean_q = inst_query.strip().replace("#", "")
-                    run_input = {
-                        "search": clean_q,
-                        "searchType": "mixed",  # 'user' থেকে 'mixed' করা হলো যাতে নাম এবং বায়ো দুইটাই ম্যাপিং করে
-                        "resultsLimit": int(insta_limit)
-                    }
-                    actor_url = f"https://api.apify.com/v2/acts/apify~instagram-scraper/runs?token={apify_token}"
-                    
-                    try:
-                        res = requests.post(actor_url, json=run_input, timeout=25)
-                        if res.status_code in [200, 201]:
-                            run_data = res.json()
-                            dataset_id = run_data["data"]["defaultDatasetId"]
-                            
-                            st.caption("🔄 ক্লাউড রেসপন্স রিসিভড। ডেটা প্রসেসিংয়ের জন্য ৭ সেকেন্ড হোল্ড...")
-                            time.sleep(7)
-                            
-                            fetch_url = f"https://api.apify.com/v2/datasets/{dataset_id}/items?token={apify_token}"
-                            items_res = requests.get(fetch_url)
-                            
-                            if items_res.status_code == 200:
-                                raw_items = items_res.json()
-                                i_leads = []
-                                for idx, item in enumerate(raw_items):
-                                    username = item.get("username") or item.get("input", {}).get("search")
-                                    if not username and item.get("user"):
-                                        username = item.get("user", {}).get("username")
-                                        
-                                    full_name = item.get("fullName") or item.get("user", {}).get("fullName") or username
-                                    phone = item.get("publicPhone") or ""
-                                    
-                                    if username and len(i_leads) < insta_limit:
-                                        i_leads.append({
-                                            "Name": full_name, "Username": f"@{username}", "Phone": phone
-                                        })
-                                
-                                if not i_leads:
-                                    st.error("❌ এপিআই সাকসেসফুল কিন্তু ইনস্টাগ্রাম এই কিওয়ার্ডের কোনো সচল ইউজার প্রোফাইল ব্যাক করেনি। কিওয়ার্ড পরিবর্তন করে ট্রাই করুন (যেমন: শুধু wedding বা photo)।")
-                                    st.session_state.insta_leads = []
-                                else:
-                                    st.session_state.insta_leads = i_leads
-                                    st.success(f"🎯 লাইভ এপিআই থেকে {len(i_leads)}টি ১০০% আসল ইনস্টাগ্রাম প্রোফাইল পাওয়া গেছে!")
-                            else:
-                                st.error("❌ Apify ডেটাসেট থেকে লিড ডেটা ফেচ করা যায়নি।")
-                                st.session_state.insta_leads = []
-                        else:
-                            st.error(f"❌ Apify Token রিজেক্টেড অথবা মেম্বারের ফ্রি ব্যালেন্স শেষ! স্ট্যাটাস কোড: {res.status_code}")
-                            st.session_state.insta_leads = []
-                    except Exception as e:
-                        st.error(f"❌ ইনস্টাগ্রাম লাইভ এপিআই নেটওয়ার্ক এরর: {str(e)}")
-                        st.session_state.insta_leads = []
-                    
-                    if st.session_state.insta_leads:
-                        history_logs.append({
-                            "user": current_user_id, "engine": "Instagram Live", "keyword": inst_query, "count": len(st.session_state.insta_leads), "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
-                        })
-                        save_json_file(HISTORY_DB, history_logs)
-
-        if st.session_state.insta_leads:
-            st.write("### 🛡️ Anti-Block Direct Action Panel")
-            for client in st.session_state.insta_leads:
-                clean_name = client["Name"].replace("@", "")
-                p_msg = short_pitch.replace("{Name}", clean_name)
-                enc_msg = urllib.parse.quote(p_msg)
-                
-                clean_username = client["Username"].replace("@", "").strip()
-                ig_url = f"https://instagram.com/{clean_username}"
-                
-                with st.container():
-                    st.markdown(f"#### 👤 {client['Name']} (`{client['Username']}`)")
-                    st.text(f"Hook Text: {p_msg}")
-                    
-                    col_b1, col_b2 = st.columns(2)
-                    if col_b1.button(f"📸 ওয়ান-ক্লিক ইনস্টাগ্রাম ওপেন ({client['Username']})", key=f"ig_{clean_username}_{random.randint(0,10000)}"):
-                        st.markdown(f'<a href="{ig_url}" target="_blank">➔ এখানে ক্লিক করুন (ইনস্টাগ্রাম প্রোফাইল)</a>', unsafe_allow_html=True)
-                        st.warning(f"🛡️ Anti-Block ডিলে অ্যাক্টিভ! পরবর্তী লিংকের জন্য {interval_delay} সেকেন্ড অপেক্ষা করুন।")
-                        time.sleep(interval_delay)
-                        
-                    if client["Phone"]:
-                        wa_url = f"https://wa.me/{client['Phone']}?text={enc_msg}"
-                        if col_b2.button(f"💬 ওয়ান-ক্লিক হোয়াটসঅ্যাপ ওপেন ({client['Phone']})", key=f"wa_{clean_username}"):
-                            st.markdown(f'<a href="{wa_url}" target="_blank">➔ এখানে ক্লিক করুন (হোয়াটসঅ্যাপ চ্যাট)</a>', unsafe_allow_html=True)
-                            st.warning(f"🛡️ সেফটি ডিলে অ্যাক্টিভ! {interval_delay} সেকেন্ড হোল্ড...")
-                            time.sleep(interval_delay)
-                    else:
-                        col_b2.info("ℹ️ এই আইডিতে পাবলিক হোয়াটসঅ্যাপ নাম্বার মেলেনি। শুধু ইনস্টাগ্রামে নক দিন।")
-                st.markdown("---")
+                st.info("💡 বাম পাশের বক্সে আপনার কাঙ্ক্ষিত নিশ কিওয়ার্ডটি লিখে 'হান্টিং রাডার অ্যাক্টিভেট করুন' বাটনে চাপ দিলে এখানে ওয়ান-ক্লিক কন্ট্রোল প্যানেল ভেসে উঠবে।")
 
     # --- TAB 3: CYBER MESSENGER & HQ VIDEO CALL ---
     with engine_tab3:
@@ -517,7 +472,7 @@ else:
                 new_badge = st.selectbox("নতুন ব্যাজ বা একটিভিটি লেভেল সেট করুন:", options=["None", "Blue Tick 🔵", "Always Active 🔥", "Low Active 💤"])
                 mod_checkbox = st.checkbox("এই মেম্বারকে ড্যাশবোর্ডের মডারেটর (Moderator) বানান 🛠️", value=m_data.get("is_moderator", False))
                 
-                if st.button("মেম্বার প্রোфাইল আপডেট করুন ⚙️"):
+                if st.button("মেম্বার প্রোফাইল আপডেট করুন ⚙️"):
                     users[selected_member]["badge"] = new_badge
                     users[selected_member]["is_moderator"] = mod_checkbox
                     save_json_file(USER_DB, users)
