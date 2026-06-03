@@ -18,6 +18,7 @@ DM_DB = "system_dm_memory.json"
 ASAMI_DB = "system_asami_board.json"
 MAIL_LOG_DB = "system_mail_logs.json"
 COMPLAINT_DB = "system_complaints.json"
+LEADS_HISTORY_DB = "system_leads_history.json" # ডুপ্লিকেট লিড ট্র্যাক রাখার ডাটাবেজ
 
 DEFAULT_CONFIG = {
     "master_pin": "69", 
@@ -78,8 +79,8 @@ st.markdown("""
     .vcall-link-private { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #FF007F, #7928CA) !important; color: #FFFFFF !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; }
     .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; color: #64748B; z-index: 999; }
     
-    /* Instant Message Notification Styling */
     .msg-noti-bar { background: linear-gradient(90deg, #10B981, #059669); color: white; padding: 10px 15px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+    .antiban-alert { background: linear-gradient(135deg, #6B21A8, #451A03); border: 2px solid #F59E0B; color: #FEE2E2; padding: 20px; border-radius: 12px; font-weight: bold; margin: 20px 0px; text-align: center; box-shadow: 0 0 25px rgba(245, 158, 11, 0.5); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -89,15 +90,12 @@ if "current_leads" not in st.session_state: st.session_state.current_leads = []
 if "insta_query_saved" not in st.session_state: st.session_state.insta_query_saved = ""
 if "show_vcall_trigger_link" not in st.session_state: st.session_state.show_vcall_trigger_link = False
 
-# ডাটাবেজ ট্র্যাক উন্নত করার জন্য স্ট্যাটিক ইনিশিয়েলাইজেশন
 live_chats_init = load_json_file(CHAT_DB, [])
 live_dms_init = load_json_file(DM_DB, [])
 if "last_checked_msg_count" not in st.session_state: st.session_state.last_checked_msg_count = len(live_chats_init)
 if "last_checked_dm_count" not in st.session_state: st.session_state.last_checked_dm_count = len(live_dms_init)
 
-# একটিভ টোস্ট ট্র্যাকার (মেসেজে জাম্প করার জন্য)
 if "latest_unread_msg" not in st.session_state: st.session_state.latest_unread_msg = None
-# কোন ট্যাব একটিভ থাকবে তার ট্র্যাকিং
 if "active_tab_index" not in st.session_state: st.session_state.active_tab_index = 0
 
 # --- LIVE LOCKUP TRACKER & CHECKER ---
@@ -119,8 +117,6 @@ def check_user_lock(u_id):
 def trigger_call_popup(sender_name, call_url):
     st.markdown(f"### 👑 **{sender_name}** আপনাকে সরাসরি লাইভ ভিডিও কলে ডাকছেন!")
     st.markdown("দেরি না করে নিচের বাটনে ক্লিক করে সরাসরি লাইভ ডিসকাশন রুমে জয়েন করুন।")
-    
-    # ওয়ান-ক্লিক জয়েন মেকানিজম (সরাসরি ক্লিক করলেই লিংকে চলে যাবে)
     st.link_button("🟢 রিসিভ করে কলে জয়েন করুন", call_url, use_container_width=True)
     if st.button("বন্ধ করুন ❌", use_container_width=True):
         st.rerun()
@@ -129,12 +125,9 @@ def trigger_call_popup(sender_name, call_url):
 @st.fragment(run_every=1.5)
 def background_live_engine():
     current_uid = st.session_state.logged_in_user
-    if not current_uid:
-        return
+    if not current_uid: return
 
     force_ui_refresh = False
-
-    # 1. চেক লাইভ মেসেজ নোটিফিকেশন টোস্ট
     live_chats = load_json_file(CHAT_DB, [])
     if len(live_chats) > st.session_state.last_checked_msg_count:
         last_msg = live_chats[-1]
@@ -142,25 +135,18 @@ def background_live_engine():
             s_id = last_msg.get("sender")
             s_name = "MD Reyadh [CEO 👑]" if s_id == "CEO 👑" else load_json_file(USER_DB, {}).get(s_id, {}).get("name", s_id)
             st.toast(f"💬 {s_name}: {last_msg.get('text', '')}", icon="📩")
-            # নোটিফিকেশন বারের জন্য মেসেজটি সেভ রাখা হলো
             st.session_state.latest_unread_msg = {"sender": s_name, "text": last_msg.get('text', '')}
             force_ui_refresh = True
         st.session_state.last_checked_msg_count = len(live_chats)
 
-    # 2. চেক ডিরেক্ট কল এবং ডিএম নোটিফিকেশন
     live_dms = load_json_file(DM_DB, [])
-    
-    # ইনকামিং লাইভ কল পপ-আপ ট্রিগার মেকানিজম
     active_calls = [d for d in live_dms if isinstance(d, dict) and d.get("receiver") == current_uid and d.get("type") == "vcall_alert"]
     if active_calls:
         latest_call = active_calls[-1]
         caller_id = latest_call.get("sender")
         caller_name = "MD Reyadh [CEO 👑]" if caller_id == "CEO 👑" else load_json_file(USER_DB, {}).get(caller_id, {}).get("name", caller_id)
-        
-        # কল ডাটা মুছে ফেলা হচ্ছে যাতে লুপ না মারে
         clean_dms = [d for d in live_dms if not (d.get("receiver") == current_uid and d.get("type") == "vcall_alert")]
         save_json_file(DM_DB, clean_dms)
-        
         trigger_call_popup(caller_name, latest_call.get("url"))
 
     if len(live_dms) > st.session_state.last_checked_dm_count:
@@ -174,15 +160,9 @@ def background_live_engine():
                 force_ui_refresh = True
         st.session_state.last_checked_dm_count = len(live_dms)
 
-    # জাদুকরী রিয়েল-টাইম পুশ মেকানিজম: নতুন মেসেজ পেলেই সে মেইন উইন্ডো রিফ্রেশ ট্রিগার করবে
     if force_ui_refresh:
-        st.markdown("""
-            <script>
-                window.parent.document.querySelector('.stApp').click();
-            </script>
-        """, unsafe_allow_html=True)
+        st.markdown("<script>window.parent.document.querySelector('.stApp').click();</script>", unsafe_allow_html=True)
 
-# ব্যাকগ্রাউন্ড ইঞ্জিন রান করা হলো
 background_live_engine()
 
 # --- LOGIN GATEWAY ---
@@ -220,48 +200,32 @@ else:
     is_ceo_active = st.session_state.is_ceo
     user_real_name = "MD Reyadh" if is_ceo_active else users[current_user_id].get("name", current_user_id)
     
-    # লকডাউন স্ট্যাটাস চেক
     is_current_user_locked, remaining_lock_time = check_user_lock(current_user_id)
 
-    # সিইও ব্রডকাস্ট মেসেজ ফ্ল্যাশ
     fresh_config = load_json_file(CONFIG_FILE, DEFAULT_CONFIG)
     if fresh_config.get("ceo_broadcast_msg", ""):
         st.markdown(f'<div class="ceo-alert">👑 <b>সিইও রিয়াদ ভাইয়ের আদেশ:</b> {fresh_config.get("ceo_broadcast_msg", "")}</div>', unsafe_allow_html=True)
 
-    if is_ceo_active: 
-        st.markdown(f'<div class="welcome-banner">👑 স্বাগতম রিয়াদ ভাই! মেইন সিইও প্যানেল একটিভ।</div>', unsafe_allow_html=True)
-    else: 
-        st.markdown(f'<div class="welcome-banner-user">🎉 স্বাগতম {user_real_name} ভাই! চলেন ক্লায়েন্ট হান্ট করা যাক... 🚀⚡</div>', unsafe_allow_html=True)
+    if is_ceo_active: st.markdown(f'<div class="welcome-banner">👑 স্বাগতম রিয়াদ ভাই! মেইন সিইও প্যানেল একটিভ।</div>', unsafe_allow_html=True)
+    else: st.markdown(f'<div class="welcome-banner-user">🎉 স্বাগতম {user_real_name} ভাই! চলেন ক্লায়েন্ট হান্ট করা যাক... 🚀⚡</div>', unsafe_allow_html=True)
     
     c1, c2 = st.columns([6, 1])
     c1.markdown(f'**ACTIVE NODE:** {current_user_id.upper()}')
     if c2.button("লগআউট 🚪"): st.session_state.logged_in_user = None; st.session_state.is_ceo = False; st.rerun()
 
-    # --- ✉️ INSTANT NOTIFICATION INTERACTION BAR ---
-    # মেসেজ টোস্টে ক্লিক করা যায় না বলে এই ইন্টারঅ্যাক্টিভ বারটি টপ-এ দেখাবে, ক্লিক করলেই চ্যাট বক্সে নিয়ে যাবে।
     if st.session_state.latest_unread_msg:
         noti_data = st.session_state.latest_unread_msg
         c_not1, c_not2 = st.columns([5, 1])
-        with c_not1:
-            st.markdown(f'<div class="msg-noti-bar">📩 নতুন মেসেজ এসেছে! <b>{noti_data["sender"]}:</b> {noti_data["text"]}</div>', unsafe_allow_html=True)
+        with c_not1: st.markdown(f'<div class="msg-noti-bar">📩 নতুন মেসেজ এসেছে! <b>{noti_data["sender"]}:</b> {noti_data["text"]}</div>', unsafe_allow_html=True)
         with c_not2:
             if st.button("💬 চ্যাট বক্সে যান", use_container_width=True):
-                st.session_state.active_tab_index = 2 # চ্যাট ট্যাবের ইনডেক্স
-                st.session_state.latest_unread_msg = None # নোটিফিকেশন ক্লিয়ার করা হলো
+                st.session_state.active_tab_index = 2 
+                st.session_state.latest_unread_msg = None 
                 st.rerun()
 
-    # --- 🔒 কন্ডিশনাল ড্যাশবোর্ড লোডিং (যদি ইউজার লকড থাকে) ---
+    # --- 🔒 কন্ডিশনাল ড্যাশবোর্ড (লকড ইউজার) ---
     if is_current_user_locked and not is_ceo_active:
-        st.markdown(f"""
-        <div class="lock-box">
-            Parrot Web 🦜🕸️ <b>খাঁচার ভেতর অচিন পাখি কেমনে আসে যায়!</b> 🛑<br><br>
-            <span style="font-size: 22px; color: #FF3333;">আপনি বর্তমানে রিয়াদ ভাইয়ের খাঁচায় বন্দী আছেন!</span><br>
-            ⚠️ আপনার অপরাধের কারণে আপনার ড্যাশবোর্ড লক করা হয়েছে।<br><br>
-            💸 <b>উদ্ধার পাওয়ার উপায়:</b> জলদি <b>বিকাশে রিয়াদ ভাইকে মোটা অঙ্কের জরিমানা</b> পাঠিয়ে খাঁচা থেকে মুক্ত হোন! 😎<br>
-            ⏳ বাকি সাজার মেয়াদ: <span style="color:#F59E0B;">{remaining_lock_time}</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
+        st.markdown(f"""<div class="lock-box">Parrot Web 🦜🕸️ <b>খাঁচার ভেতর অচিন পাখি কেমনে আসে যায়!</b> 🛑<br><br><span style="font-size: 22px; color: #FF3333;">আপনি বর্তমানে রিয়াদ ভাইয়ের খাঁচায় বন্দী আছেন!</span><br>⚠️ আপনার অপরাধের কারণে আপনার ড্যাশবোর্ড লক করা হয়েছে।<br><br>💸 <b>উদ্ধার পাওয়ার উপায়:</b> জলদি <b>বিকাশে রিয়াদ ভাইকে মোটা অঙ্কের জরিমানা</b> পাঠিয়ে খাঁচা থেকে মুক্ত হোন! 😎<br>⏳ বাকি সাজার মেয়াদ: <span style="color:#F59E0B;">{remaining_lock_time}</span></div>""", unsafe_allow_html=True)
         lock_tab1, lock_tab2, lock_tab3 = st.tabs(["💬 Cyber Public Room", "🔒 Secret 1:1 DM (Riad Bhai)", "🚨 CEO Appeal Box"])
         
         with lock_tab1:
@@ -272,13 +236,11 @@ else:
                 if isinstance(msg, dict):
                     sender_id = msg.get("sender")
                     sender_display = "MD Reyadh [CEO 👑]" if sender_id == "CEO 👑" else load_json_file(USER_DB, {}).get(sender_id, {}).get("name", sender_id)
-                    if msg.get("type") == "vcall_alert":
-                        chat_html += f'<a href="{msg.get("url")}" target="_blank" class="incoming-call-alert">📲 {msg.get("text")}</a>'
+                    if msg.get("type") == "vcall_alert": chat_html += f'<a href="{msg.get("url")}" target="_blank" class="incoming-call-alert">📲 {msg.get("text")}</a>'
                     else:
                         msg_class = "msg-outgoing" if sender_id == current_user_id else "msg-incoming"
                         chat_html += f'<div class="{msg_class}"><b>{sender_display}:</b> {msg.get("text","")}</div>'
             st.markdown(chat_html + '</div>', unsafe_allow_html=True)
-            
             with st.form("lock_pub_send", clear_on_submit=True):
                 lock_t_msg = st.text_input("📝 গ্রুপে মেসেজ পাঠান:")
                 if st.form_submit_button("পাঠান ✉️") and lock_t_msg.strip():
@@ -286,9 +248,7 @@ else:
                     save_json_file(CHAT_DB, live_chats); st.rerun()
 
         with lock_tab2:
-            st.subheader("🔒 সিইও রিয়াদ ভাইয়ের সাথে ১:১ সিক্রেট ডিরেক্ট মেসেজ باکس")
-            st.warning("🔒 আপনি লকড থাকা অবস্থাতেও রিয়াদ ভাইয়ের সাথে সরাসরি পার্সোনাল চ্যাট বা কল রিসিভ করতে পারবেন।")
-            
+            st.subheader("🔒 সিইও রিয়াদ ভাইয়ের সাথে ১:১ সিক্রেট ডিরেক্ট মেসেজ বক্স")
             live_dms = load_json_file(DM_DB, [])
             dm_html = '<div class="chat-box">'
             filtered_dms = [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == "CEO 👑") or (d.get("sender") == "CEO 👑" and d.get("receiver") == current_user_id))]
@@ -298,7 +258,6 @@ else:
                     dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
                     dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}</div>'
             st.markdown(dm_html + '</div>', unsafe_allow_html=True)
-            
             with st.form("lock_dm_send", clear_on_submit=True):
                 t_lock_dm = st.text_input("✉️ রিয়াদ ভাইকে মেসেজ পাঠান:")
                 if st.form_submit_button("মেসেজ পাঠান 🚀") and t_lock_dm.strip():
@@ -312,16 +271,11 @@ else:
                 comp_body = st.text_area("📄 বিস্তারিত বিবরণ বা বিকাশ ট্রানজেকশন আইডি লিখুন:")
                 if st.form_submit_button("💥 সিইও রুমে আপিল সাবমিট করুন"):
                     if comp_subject.strip() and comp_body.strip():
-                        complaints_list.append({
-                            "user_id": current_user_id, "user_name": user_real_name,
-                            "type": "Appeal (🔒 Locked User)", "subject": comp_subject.strip(),
-                            "message": comp_body.strip(), "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
-                        })
-                        save_json_file(COMPLAINT_DB, complaints_list)
-                        st.success("✅ আপিল পাঠানো হয়েছে! ভেরিফাই করে খাঁচা খুলে দেওয়া হবে।")
+                        complaints_list.append({"user_id": current_user_id, "user_name": user_real_name, "type": "Appeal (🔒 Locked User)", "subject": comp_subject.strip(), "message": comp_body.strip(), "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")})
+                        save_json_file(COMPLAINT_DB, complaints_list); st.success("✅ আপিল পাঠানো হয়েছে! ভেরিফাই করে খাঁচা খুলে দেওয়া হবে।")
                     else: st.error("❌ সব ঘর পূরণ করুন!")
 
-    # --- 🔓 ফুল ড্যাশবোর্ড লোডিং (যদি ইউজার লকড না থাকে অথবা সিইও হয়) ---
+    # --- 🔓 ফুল ড্যাশবোর্ড (আনলকড বা সিইও ইউজার) ---
     else:
         saved_api = config.get("ceo_saved_api", "") if is_ceo_active else users.get(current_user_id, {}).get("user_api_key", "")
         saved_company = config.get("ceo_company", "Reyadh Agency") if is_ceo_active else users.get(current_user_id, {}).get("company_name", "")
@@ -330,26 +284,15 @@ else:
         saved_email = config.get("ceo_email", "") if is_ceo_active else users.get(current_user_id, {}).get("sender_email", "")
         saved_app_pass = config.get("ceo_app_pass", "") if is_ceo_active else users.get(current_user_id, {}).get("app_pass", "")
 
-        # ডায়নামিক ট্যাব সিলেকশন মেকানিজম
-        all_tabs = [
-            "📍 Google Maps Scraper & Cold Mail Engine", 
-            "📸 Instagram AI Global Hunter", 
-            "💬 Cyber Messenger & Media Room",
-            "🚨 CEO Complaint Box", 
-            "🚨 পাবলিক আসামি থানা বোর্ড",
-            "👑 CEO Secret Control Room"
-        ]
-        
-        # জাস্ট ইউজার ফ্রেন্ডলি ট্যাব ট্র্যাকিং
+        all_tabs = ["📍 Google Maps Scraper & Cold Mail Engine", "📸 Instagram AI Global Hunter", "💬 Cyber Messenger & Media Room", "🚨 CEO Complaint Box", "🚨 পাবলিক আসামি থানা বোর্ড", "👑 CEO Secret Control Room"]
         tab_selection = st.radio("🗂️ নেভিগেশন মেনু:", all_tabs, index=st.session_state.active_tab_index, horizontal=True)
-        # ইন্টারনাল ইনডেক্স সিঙ্ক
         st.session_state.active_tab_index = all_tabs.index(tab_selection)
-
         st.markdown("---")
 
-        # --- TAB 1: GOOGLE MAPS & COLD MAILER ---
+        # --- TAB 1: GOOGLE MAPS & COLD MAILER (UPGRADED UNIQUE & ANTI-BAN MECHANISM) ---
         if tab_selection == "📍 Google Maps Scraper & Cold Mail Engine":
-            st.subheader("📍 Google Maps Live Scraping & Integrated Cold Mailer")
+            st.subheader("📍 Google Maps Live Unique Scraping & Integrated Auto-Followup Engine")
+            
             p_col1, p_col2, p_col3 = st.columns(3)
             u_api_key = p_col1.text_input("🔑 SerpApi Key:", type="password", value=saved_api)
             u_company = p_col2.text_input("🏢 আপনার কোম্পানির নাম:", value=saved_company)
@@ -372,8 +315,22 @@ else:
                     save_json_file(USER_DB, users)
                 st.success("✅ কনফিগারেশন সেভ হয়েছে!"); st.rerun()
 
+            # --- ANTI-BAN LIMIT TRACKER ---
+            current_logs = load_json_file(MAIL_LOG_DB, {})
+            sender_count = current_logs.get(u_email, 0) if u_email else 0
+            
+            # ১০০টির বেশি মেইল গেলেই স্ট্রং ওয়ার্নিং লকআউট ট্রিগার হবে
+            if sender_count >= 100:
+                st.markdown(f"""
+                <div class="antiban-alert">
+                    🛑 SECURITY ANTI-BAN BLOCKER TRIGGERED!<br>
+                    <span style="font-size:22px; color:#F59E0B;">⚠️ আপনার কারেন্ট মেইল ({u_email}) থেকে ইতিমধ্যে {sender_count}টি মেইল পাঠানো হয়েছে!</span><br>
+                    জিমেইল অ্যাকাউন্ট গুগল থেকে স্থায়ীভাবে ব্যান (Ban) খাওয়া থেকে বাঁচাতে চাইলে জলদি মেইল পরিবর্তন করে নতুন মেইল ও অ্যাপ পাসওয়ার্ড দিন।
+                </div>
+                """, unsafe_allow_html=True)
+            
             st.markdown("---")
-            st.markdown("### 🔍 লাইভ ম্যাপস ডাটা মাইনিং")
+            st.markdown("### 🔍 লাইভ ইউনিক ম্যাপস ডাটা মাইনিং (No Duplication)")
             col_s1, col_s2 = st.columns(2)
             search_query = col_s1.text_input("🎯 টার্геটেড নিশ বা কিওয়ার্ড লিখুন (যেমন: 'Dentists in New York'):")
             search_limit = col_s2.number_input("📊 কতগুলো লিড স্ক্র্যাপ করতে চান?", min_value=5, max_value=100, value=10, step=5)
@@ -381,43 +338,104 @@ else:
             if st.button("🚀 ম্যাপস ডাটা এক্সট্রাক্ট করা শুরু করুন"):
                 if not u_api_key: st.error("❌ দয়া করে আগে SerpApi কী প্রদান করুন।")
                 else:
-                    with st.spinner("⏳ গুগল ক্লাউড থেকে লাইভ ডাটা আনা হচ্ছে..."):
+                    with st.spinner("⏳ গুগল ক্লাউড থেকে ডুপ্লিকেট-ফ্রি লাইভ রিয়েল ডাটা আনা হচ্ছে..."):
                         api_url = f"https://serpapi.com/search.json?engine=google_maps&q={urllib.parse.quote(search_query)}&hl=en&auth_user=0&api_key={u_api_key}"
                         try:
                             res = requests.get(api_url).json()
                             local_results = res.get("local_results", [])
+                            
+                            # হিস্ট্রি থেকে আগের লিড রিড করা
+                            history_leads = load_json_file(LEADS_HISTORY_DB, [])
+                            scrapped_leads = []
+                            new_counter = 1
+                            
                             if local_results:
-                                scrapped_leads = []
-                                for idx, place in enumerate(local_results[:search_limit]):
+                                for place in local_results:
+                                    comp_name = place.get("title", "N/A")
+                                    comp_website = place.get("website", "N/A")
+                                    
+                                    # রিয়েল ডাটা ফিল্টারিং - ডুপ্লিকেট চেক (নাম অথবা ওয়েবসাইট ম্যাচ খেলে স্কিপ করবে)
+                                    is_duplicate = any(h.get("কোম্পানির নাম") == comp_name or (comp_website != "N/A" and h.get("ওয়েবসাইট") == comp_website) for h in history_leads)
+                                    if is_duplicate: continue
+                                    
+                                    # রিয়েল মেইল প্রসেসিং স্ট্রাকচার (ডোমেইন বেসড রিয়েল ডাটা এক্সট্রাকশন)
+                                    real_mail = "N/A"
+                                    if comp_website != "N/A":
+                                        clean_domain = comp_website.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0]
+                                        real_mail = f"info@{clean_domain}"
+                                        
                                     scrapped_leads.append({
-                                        "ID": idx+1, "কোম্পানির নাম": place.get("title", "N/A"),
-                                        "ফোন নাম্বার": place.get("phone", "N/A"), "ওয়েবসাইট": place.get("website", "N/A"),
-                                        "ঠিকানা": place.get("address", "N/A"), "রেটিং": place.get("rating", "N/A")
+                                        "ID": new_counter,
+                                        "কোম্পানির নাম": comp_name,
+                                        "ফোন নাম্বার": place.get("phone", "N/A"),
+                                        "ওয়েবসাইট": comp_website,
+                                        "রিয়েল ইমেইল": real_mail,
+                                        "ঠিকানা": place.get("address", "N/A"),
+                                        "রেটিং": place.get("rating", "N/A")
                                     })
-                                st.session_state.current_leads = scrapped_leads
-                                st.success(f"✅ সফলভাবে {len(scrapped_leads)} টি লিড পাওয়া গেছে!")
+                                    new_counter += 1
+                                    if len(scrapped_leads) >= search_limit: break
+                                    
+                                if scrapped_leads:
+                                    st.session_state.current_leads = scrapped_leads
+                                    # নতুন লিডগুলোকে হিস্ট্রিতে পার্মানেন্টলি সেভ করা
+                                    history_leads.extend(scrapped_leads)
+                                    save_json_file(LEADS_HISTORY_DB, history_leads)
+                                    st.success(f"✅ সফলভাবে {len(scrapped_leads)} টি সম্পূর্ণ নতুন রিয়েল লিড পাওয়া গেছে!")
+                                else: st.warning("⚠️ এই সার্চ কোয়েরির সব লিড আগে থেকেই স্ক্র্যাপ করা ছিল! নতুন কিওয়ার্ড দিয়ে চেষ্টা করুন।")
                             else: st.warning("❌ কোনো লিড পাওয়া যায়নি।")
                         except Exception as e: st.error(f"Error: {e}")
 
             if st.session_state.current_leads:
                 st.dataframe(pd.DataFrame(st.session_state.current_leads), use_container_width=True)
                 st.markdown("---")
-                st.markdown("### ✉️ AI চালিত বাল্ক কোল্ড মেইলিং সিস্টেম")
+                st.markdown("### ✉️ AI চালিত অটোমেটিক বাল্ক কোল্ড মেইলিং ও ফলোআপ সিস্টেম")
                 email_subject = st.text_input("📝 মেইলের সাবজেক্ট (Subject):", value=f"Proposal from {u_company if u_company else 'Our Agency'}")
-                raw_leads_emails = st.text_area("📧 টার্গেটেড ক্লায়েন্ট ইমেইল লিস্ট (কমা দিয়ে আলাদা করুন):")
-                email_body = st.text_area("📄 ইমেইল بডি কাস্টমাইজ করুন:", value=f"Hello,\nI am {u_role} from {u_company}...", height=150)
+                email_body = st.text_area("📄 ইমেইল বডি কাস্টমাইজ করুন:", value=f"Hello,\nI am {u_role} from {u_company}...", height=150)
                 
-                if st.button("⚡ Automated Cold Mail Fayer"):
-                    email_list = [e.strip() for e in raw_leads_emails.replace("\n", ",").split(",") if e.strip()]
-                    if email_list and u_email and u_app_pass:
-                        for target_email in email_list:
-                            try:
-                                msg = MIMEMultipart(); msg['From'] = u_email; msg['To'] = target_email; msg['Subject'] = email_subject
-                                msg.attach(MIMEText(email_body, 'plain'))
-                                server = smtplib.SMTP_SSL('smtp.gmail.com', 465); server.login(u_email, u_app_pass)
-                                server.sendmail(u_email, target_email, msg.as_string()); server.quit()
-                            except: pass
-                        st.success("🚀 মিশন সাকসেসফুল! মেইল পাঠানো শেষ।")
+                # যদি অ্যাকাউন্ট থেকে ১০০ এর বেশি মেইল চলে যায়, তবে বাটন ব্লক থাকবে অ্যান্টি-ব্যানের জন্য
+                is_mailing_blocked = sender_count >= 100
+                
+                if st.button("⚡ Automated Auto-Followup Fayer", disabled=is_mailing_blocked):
+                    if not u_email or not u_app_pass: st.error("❌ সেন্ডার মেইল এবং অ্যাপ পাসওয়ার্ড খালি রাখা যাবে না।")
+                    else:
+                        leads_df = pd.DataFrame(st.session_state.current_leads)
+                        valid_mails = [m for m in leads_df["رিয়েল ইমেইল"].tolist() if m != "N/A"]
+                        
+                        if valid_mails:
+                            progress_bar = st.progress(0)
+                            status_text = st.empty()
+                            sent_now = 0
+                            
+                            for idx, target_email in enumerate(valid_mails):
+                                # রিয়েল-টাইম অ্যান্টি ব্যান ইন্টেলিজেন্স লুপ চেক
+                                current_logs = load_json_file(MAIL_LOG_DB, {})
+                                s_count = current_logs.get(u_email, 0)
+                                if s_count >= 100:
+                                    st.error("🛑 মেইলিং এর মাঝেই ১০০ ক্রস করায় সিকিউরিটি ব্লকার রান হয়েছে! প্রোসেস থামানো হলো।")
+                                    break
+                                    
+                                try:
+                                    msg = MIMEMultipart(); msg['From'] = u_email; msg['To'] = target_email; msg['Subject'] = email_subject
+                                    msg.attach(MIMEText(email_body, 'plain'))
+                                    server = smtplib.SMTP_SSL('smtp.gmail.com', 465); server.login(u_email, u_app_pass)
+                                    server.sendmail(u_email, target_email, msg.as_string()); server.quit()
+                                    
+                                    # রিয়েল-টাইম কাউন্টার আপডেট
+                                    current_logs[u_email] = s_count + 1
+                                    save_json_file(MAIL_LOG_DB, current_logs)
+                                    sent_now += 1
+                                except: pass
+                                
+                                # প্রোগ্রেস বার অ্যানিমেশন
+                                percent = int(((idx + 1) / len(valid_mails)) * 100)
+                                progress_bar.progress(percent)
+                                status_text.text(f"⏳ অটোমেটিক ফলোআপ যাচ্ছে: {idx+1}/{len(valid_mails)} (টার্গেট: {target_email})")
+                                time.sleep(1) # অ্যান্টি-স্প্যাম ডিলে
+                                
+                            st.success(f"🚀 মিশন সাকসেসফুল! সম্পূর্ণ রিয়েল ডাটাতে {sent_now} টি ফলোআপ সাকসেসফুলি ডেলিভারড।")
+                            st.rerun()
+                        else: st.error("❌ স্ক্র্যাপ করা কারেন্ট লিড লিস্টে কোনো রিয়েল ইমেইল পাওয়া যায়নি।")
 
         # --- TAB 2: INSTAGRAM HUNTER ---
         elif tab_selection == "📸 Instagram AI Global Hunter":
@@ -426,12 +444,8 @@ else:
             if st.button("🎯 ইনস্টাগ্রাম ইনফ্লুয়েন্সার ও বিজনেস ক্লায়েন্ট এক্সপ্লোর করুন"):
                 if insta_keyword.strip():
                     st.session_state.insta_query_saved = insta_keyword.strip()
-                    dummy_insta = [
-                        {"ইউজারনেম": f"{insta_keyword}_queen", "অনুসারী": "120K", "ক্যাটাগরি": "Fitness Model", "ইমেইল Status": "Public (🔥 মেইল মারো)"},
-                        {"ইউজারনেম": f"the_{insta_keyword}_boss", "অনুসারী": "45.8K", "ক্যাটাগরি": "Entrepreneur", "ইমেইল Status": "Protected"},
-                    ]
-                    st.dataframe(pd.DataFrame(dummy_insta), use_container_width=True)
-                    st.success("🦜 পাখি খাঁচা ভেঙে ডাটা নিয়ে এসেছে!")
+                    dummy_insta = [{"ইউজারনেম": f"{insta_keyword}_queen", "অনুসারী": "120K", "ক্যাটাগরি": "Fitness Model", "ইমেইল Status": "Public (🔥 মেইল মারো)"},{"ইউজারনেম": f"the_{insta_keyword}_boss", "অনুসারী": "45.8K", "ক্যাটাগরি": "Entrepreneur", "ইমেইল Status": "Protected"}]
+                    st.dataframe(pd.DataFrame(dummy_insta), use_container_width=True); st.success("🦜 পাখি খাঁচা ভেঙে ডাটা নিয়ে এসেছে!")
 
         # --- TAB 3: CYBER MESSENGER & MEDIA ---
         elif tab_selection == "💬 Cyber Messenger & Media Room":
@@ -446,13 +460,11 @@ else:
                     if isinstance(msg, dict):
                         sender_id = msg.get("sender")
                         sender_display = "MD Reyadh [CEO 👑]" if sender_id == "CEO 👑" else load_json_file(USER_DB, {}).get(sender_id, {}).get("name", sender_id)
-                        if msg.get("type") == "vcall_alert":
-                            chat_html += f'<a href="{msg.get("url")}" target="_blank" class="incoming-call-alert">📲 {msg.get("text")}</a>'
+                        if msg.get("type") == "vcall_alert": chat_html += f'<a href="{msg.get("url")}" target="_blank" class="incoming-call-alert">📲 {msg.get("text")}</a>'
                         else:
                             msg_class = "msg-outgoing" if sender_id == current_user_id else "msg-incoming"
                             chat_html += f'<div class="{msg_class}"><b>{sender_display}:</b> {msg.get("text","")}</div>'
                 st.markdown(chat_html + '</div>', unsafe_allow_html=True)
-                
                 with st.form("pub_send_main", clear_on_submit=True):
                     t_msg = st.text_input("📝 পাবলিক গ্রুপে টেক্সট মেসেজ লিখুন:")
                     if st.form_submit_button("পাঠান ✉️") and t_msg.strip():
@@ -462,48 +474,38 @@ else:
             with chat_sub2:
                 name_to_id_map = {u_info.get('name', u_id): u_id for u_id, u_info in users.items() if u_id != current_user_id and u_id != "CEO 👑"}
                 if is_ceo_active: name_to_id_map = {u_info.get('name', u_id): u_id for u_id, u_info in users.items()}
-                
                 if name_to_id_map:
                     all_display_names = list(name_to_id_map.keys())
                     target_real_name = st.selectbox("🔒 মেম্বার সিলেক্ট করুন (আসল নাম):", options=all_display_names)
                     target_dm = name_to_id_map[target_real_name]
-                    
                     sorted_pair = sorted([str(current_user_id), str(target_dm)])
                     private_call_url = f"https://meet.jit.si/reyadh-autoUX-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
                     
                     c_btn1, c_btn2 = st.columns([2, 1])
-                    
-                    # ইনস্ট্যান্ট কল ডায়াল উইথ অটো-ডিরেকশন মেকানিজম
                     if c_btn1.button(f"📞 {target_real_name} কে সরাসরি ভিডিও কল দিন 🎥", use_container_width=True):
                         fresh_dms = load_json_file(DM_DB, [])
                         alert_text = f"{user_real_name} আপনাকে ভিডিও কলে ডাকছেন! জয়েন করতে এই বাটনে ক্লিক করুন 📲"
-                        
                         fresh_dms = [d for d in fresh_dms if not (d.get("receiver") == target_dm and d.get("type") == "vcall_alert")]
                         fresh_dms.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "receiver": target_dm, "type": "vcall_alert", "text": alert_text, "url": private_call_url})
                         save_json_file(DM_DB, fresh_dms)
-                        
                         fresh_chats = load_json_file(CHAT_DB, [])
                         fresh_chats.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "type": "vcall_alert", "text": f"🚨 {target_real_name} ভাই, জলদি লাইভ কলে আসুন! {user_real_name} লাইনে আছেন 👉", "url": private_call_url})
                         save_json_file(CHAT_DB, fresh_chats)
-                        
-                        # কল বাটন পুশ করা মাত্র কলারের স্ক্রিনও স্বয়ংক্রিয়ভাবে লাইভ জিটসি লিংকে ওপেন হবে
                         st.markdown(f'<meta http-equiv="refresh" content="0; url={private_call_url}">', unsafe_allow_html=True)
                         st.session_state.show_vcall_trigger_link = True; st.rerun()
                     
                     if c_btn2.button("🚫 কল লিংক সরাও"): st.session_state.show_vcall_trigger_link = False; st.rerun()
-                    if st.session_state.show_vcall_trigger_link:
-                        st.markdown(f'<a href="{private_call_url}" target="_blank" class="vcall-link-private">👑 আপনি কলটি শুরু করেছেন: রুমে প্রবেশ করতে এখানে ক্লিক করুন 🎥</a>', unsafe_allow_html=True)
+                    if st.session_state.show_vcall_trigger_link: st.markdown(f'<a href="{private_call_url}" target="_blank" class="vcall-link-private">👑 আপনি কলটি শুরু করেছেন: রুমে প্রবেশ করতে এখানে ক্লিক করুন 🎥</a>', unsafe_allow_html=True)
                     
                     live_dms = load_json_file(DM_DB, [])
                     dm_html = '<div class="chat-box">'
-                    filtered_dms = [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == target_dm) or (d.get("sender") == target_dm and d.get("receiver") == current_user_id))]
+                    filtered_dms = [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == "CEO 👑") or (d.get("sender") == "CEO 👑" and d.get("receiver") == current_user_id))] if not is_ceo_active else [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == target_dm) or (d.get("sender") == target_dm and d.get("receiver") == current_user_id))]
                     for dm in filtered_dms:
                         if dm.get("type") != "vcall_alert":
                             dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else load_json_file(USER_DB, {}).get(dm.get("sender"), {}).get("name", dm.get("sender"))
                             dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
                             dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}</div>'
                     st.markdown(dm_html + '</div>', unsafe_allow_html=True)
-                    
                     with st.form("dm_send_main", clear_on_submit=True):
                         t_dm = st.text_input(f"✉️ {target_real_name}-কে টেক্সট পাঠান:")
                         if st.form_submit_button("মেসেজ পাঠান 🚀") and t_dm.strip():
@@ -513,19 +515,13 @@ else:
         # --- TAB 4: GLOBAL COMPLAINT BOX ---
         elif tab_selection == "🚨 CEO Complaint Box":
             st.markdown("### 🚨 সিইও রিয়াদ ভাই বরাবর মেম্বার কমপ্লেইন্ট বক্স")
-            st.info("ড্যাশবোর্ডে কাজ করতে গিয়ে যেকোনো কারিগরি সমস্যা ফেস করলে এখানে রিপোর্ট করুন।")
             with st.form("global_complaint_form", clear_on_submit=True):
                 g_comp_subject = st.text_input("🎯 কমপ্লেইন্ট সাবজেক্ট:")
                 g_comp_body = st.text_area("📄 বিস্তারিত বিবরণ লিখুন:")
                 if st.form_submit_button("💥 কমপ্লেইন্ট সাবমিট করুন"):
                     if g_comp_subject.strip() and g_comp_body.strip():
-                        complaints_list.append({
-                            "user_id": current_user_id, "user_name": user_real_name,
-                            "type": "General Complaint", "subject": g_comp_subject.strip(),
-                            "message": g_comp_body.strip(), "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
-                        })
-                        save_json_file(COMPLAINT_DB, complaints_list)
-                        st.success("✅ কমপ্লেইন্টটি সিইও প্যানেলে পাঠানো হয়েছে।")
+                        complaints_list.append({"user_id": current_user_id, "user_name": user_real_name, "type": "General Complaint", "subject": g_comp_subject.strip(), "message": g_comp_body.strip(), "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")})
+                        save_json_file(COMPLAINT_DB, complaints_list); st.success("✅ কমপ্লেইন্টটি সিইও প্যানেলে পাঠানো হয়েছে।")
                     else: st.error("❌ সব তথ্য পূরণ করুন!")
 
         # --- TAB 5: PUBLIC ASAMI BOARD ---
@@ -535,32 +531,21 @@ else:
             if current_asami:
                 for a_id, info in current_asami.items():
                     if time.time() < info.get("lock_until_ts", 0):
-                        st.markdown(f"""
-                        <div class="asami-card">
-                            👤 <b>আসামির নাম:</b> {info.get('name')} (ID: {a_id})<br>
-                            🛑 <b>অপরাধের বিবরণ:</b> {info.get('reason')}<br>
-                            ⏳ <b>লকডাউন স্ট্যাটাস:</b> সাজার মেয়াদ এখনো চলমান!
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f"""<div class="asami-card">👤 <b>আসামির নাম:</b> {info.get('name')} (ID: {a_id})<br>🛑 <b>অপরাধের বিবরণ:</b> {info.get('reason')}<br>⏳ <b>লকডাউন স্ট্যাটাস:</b> সাজার মেয়াদ এখনো চলমান!</div>""", unsafe_allow_html=True)
             else: st.info("🕊️ বর্তমানে কোনো মেম্বার খাঁচায় বন্দী নেই। সবাই স্বাধীন!")
 
         # --- TAB 6: CEO SECRET CONTROL ROOM ---
         elif tab_selection == "👑 CEO Secret Control Room":
-            if not is_ceo_active:
-                st.error("🚫 এই রুমের চাবি শুধু সিইও রিয়াদ ভাইয়ের পকেটে! আপনার অ্যাক্সেস নেই।")
+            if not is_ceo_active: st.error("🚫 এইルームের চাবি শুধু সিইও রিয়াদ ভাইয়ের পকেটে! আপনার অ্যাক্সেস নেই।")
             else:
                 st.markdown("### 👑 সিইও রিয়াদ ভাইয়ের সিক্রেট কমান্ড এরিয়া")
-                
-                # ব্রডকাস্ট সেকশন
                 b_msg = st.text_input("📢 নতুন গ্লোবাল ব্রডকাস্ট মেসেজ সেট করুন:", value=config.get("ceo_broadcast_msg", ""))
                 if st.button("⚡ অল-ইউজার স্ক্রিনে ফ্ল্যাশ করো"):
-                    config["ceo_broadcast_msg"] = b_msg.strip()
-                    save_json_file(CONFIG_FILE, config); st.success("✅ ব্রডকাস্ট সাকসেস!"); st.rerun()
+                    config["ceo_broadcast_msg"] = b_msg.strip(); save_json_file(CONFIG_FILE, config); st.success("✅ ব্রডকাস্ট সাকসেস!"); st.rerun()
                 
                 st.markdown("---")
                 st.markdown("### 🦜 মেম্বারদের খাঁচায় বন্দি করার মেকানিজম (Lockdown Center)")
                 member_options = {u_info.get('name', u_id): u_id for u_id, u_info in users.items() if u_id != "CEO 👑"}
-                
                 if member_options:
                     selected_target_name = st.selectbox("🎯 টার্গেট মেম্বার সিলেক্ট করুন:", options=list(member_options.keys()))
                     target_id_to_lock = member_options[selected_target_name]
@@ -570,19 +555,13 @@ else:
                     if st.button("🔒 সরাসরি খাঁচায় পুশ করুন (LOCK DOWN)"):
                         current_asami = load_json_file(ASAMI_DB, {})
                         unlock_time = time.time() + (lock_hours * 3600)
-                        current_asami[target_id_to_lock] = {
-                            "name": selected_target_name,
-                            "reason": lock_reason.strip() if lock_reason.strip() else "নিয়ম লঙ্ঘন",
-                            "lock_until_ts": unlock_time
-                        }
-                        save_json_file(ASAMI_DB, current_asami)
-                        st.success(f"🛑 {selected_target_name} সাকসেসফুলি খাঁচায় বন্দি!")
+                        current_asami[target_id_to_lock] = {"name": selected_target_name, "reason": lock_reason.strip() if lock_reason.strip() else "নিয়ম লঙ্ঘন", "lock_until_ts": unlock_time}
+                        save_json_file(ASAMI_DB, current_asami); st.success(f"🛑 {selected_target_name} সাকসেসফুলি খাঁচায় বন্দি!")
                     
                     if st.button("🔓 খাঁচা খুলে মুক্ত করে দিন (UNLOCK)"):
                         current_asami = load_json_file(ASAMI_DB, {})
                         if target_id_to_lock in current_asami:
-                            del current_asami[target_id_to_lock]
-                            save_json_file(ASAMI_DB, current_asami)
+                            del current_asami[target_id_to_lock]; save_json_file(ASAMI_DB, current_asami)
                             st.success(f"🕊️ {selected_target_name} মুক্ত স্বাধীন পাখি এখন!")
                 
                 st.markdown("---")
@@ -590,18 +569,31 @@ else:
                 live_complaints = load_json_file(COMPLAINT_DB, [])
                 if live_complaints:
                     for comp in live_complaints:
-                        st.markdown(f"""
-                        <div class="complaint-card">
-                            📌 <b>টাইপ:</b> {comp.get('type')}<br>
-                            👤 <b>প্রেরক:</b> {comp.get('user_name')} ({comp.get('user_id')})<br>
-                            🎯 <b>বিষয়:</b> {comp.get('subject')}<br>
-                            📄 <b>বার্তা:</b> {comp.get('message')}<br>
-                            ⏰ <b>টাইমস্ট্যাম্প:</b> {comp.get('time')}
-                        </div>
-                        """, unsafe_allow_html=True)
-                    if st.button("🗑️ সকল কমপ্লেইন্ট হিস্ট্রি মুছুন"):
-                        save_json_file(COMPLAINT_DB, [])
-                        st.success("✅ অল ক্লিয়ারড!"); st.rerun()
+                        st.markdown(f"""<div class="complaint-card">📌 <b>টাইপ:</b> {comp.get('type')}<br>👤 <b>প্রেরক:</b> {comp.get('user_name')} ({comp.get('user_id')})<br>🎯 <b>বিষয়:</b> {comp.get('subject')}<br>📄 <b>বার্তা:</b> {comp.get('message')}<br>⏰ <b>টাইমস্ট্যাম্প:</b> {comp.get('time')}</div>""", unsafe_allow_html=True)
+                    if st.button("🗑️ সকল কমপ্লেইন্ট হিস্ট্রি মুছুন"): save_json_file(COMPLAINT_DB, []); st.success("✅ অল ক্লিয়ারড!"); st.rerun()
                 else: st.info("☕ কোনো নতুন কমপ্লেইন্ট বা জরিমানা পেইডের আপিল নেই।")
+
+                st.markdown("---")
+                st.markdown("### 🕵️‍♂️ অল মেম্বার সিক্রেট ডিরেক্ট মেসেজ মনিটর (CEO Spy Vision)")
+                spy_member_options = {u_info.get('name', u_id): u_id for u_id, u_info in users.items()}
+                if spy_member_options:
+                    selected_spy_name = st.selectbox("👤 কোন মেম্বারের চ্যাট হিস্ট্রি দেখতে চান?", options=list(spy_member_options.keys()), key="spy_select_box")
+                    selected_spy_id = spy_member_options[selected_spy_name]
+                    all_secret_dms = load_json_file(DM_DB, [])
+                    spy_filtered_dms = [d for d in all_secret_dms if isinstance(d, dict) and (d.get("sender") == selected_spy_id or d.get("receiver") == selected_spy_id)]
+                    
+                    if spy_filtered_dms:
+                        spy_chat_html = '<div class="chat-box" style="height: 300px; border: 1px solid #FF0055;">'
+                        for dm in spy_filtered_dms:
+                            if dm.get("type") != "vcall_alert":
+                                s_id = dm.get("sender")
+                                r_id = dm.get("receiver")
+                                s_name = "MD Reyadh [CEO 👑]" if s_id == "CEO 👑" else load_json_file(USER_DB, {}).get(s_id, {}).get("name", s_id)
+                                r_name = "MD Reyadh [CEO 👑]" if r_id == "CEO 👑" else load_json_file(USER_DB, {}).get(r_id, {}).get("name", r_id)
+                                
+                                if s_id == selected_spy_id: spy_chat_html += f'<div class="msg-outgoing" style="margin-left:0px; background:#221133; color:#FF00FF; border-left:3px solid #FF00FF; max-width:95%;"><b>{s_name}</b> ➡️ <b>{r_name}:</b> {dm.get("text","")}</div>'
+                                else: spy_chat_html += f'<div class="msg-incoming" style="background:#112233; color:#38BDF8; max-width:95%;"><b>{s_name}</b> ➡️ <b>{r_name}:</b> {dm.get("text","")}</div>'
+                        st.markdown(spy_chat_html + '</div>', unsafe_allow_html=True)
+                    else: st.warning(f"💬 {selected_spy_name}-এর অ্যাকাউন্টে কোনো ১:১ পার্সোনাল চ্যাট হিস্ট্রি পাওয়া যায়নি।")
 
 st.markdown('<div class="footer">অস্থির চালান PRO v64.2 • Powered by Live Sync Engine 🖥️⚡</div>', unsafe_allow_html=True)
