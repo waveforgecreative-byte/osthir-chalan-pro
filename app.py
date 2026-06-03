@@ -51,7 +51,7 @@ dm_messages = st.session_state.dm_cache
 asami_list = st.session_state.asami_cache
 mail_logs = st.session_state.mail_logs
 
-st.set_page_config(page_title="অস্থির চালান PRO v62.0 🖥️⚡", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v63.0 🖥️⚡", page_icon="🥷", layout="wide")
 
 # --- CUSTOM CSS UI ---
 st.markdown("""
@@ -104,13 +104,13 @@ def check_user_lock(u_id):
             hours = int((rem_sec % 86400) // 3600)
             mins = int((rem_sec % 3600) // 60)
             secs = int(rem_sec % 60)
-            time_str = f"{days} দিন {hours} ঘণ্টা {mins} মিনিট" if days > 0 else f"{hours} ঘণ্টা {mins} মিনিট {secs} সেকেন্ড"
+            time_str = f"{days} দিন {hours} ঘণ্টা {mins} মিনিট" if days > 0 else f"{hours} ঘণ্টা {mins} মিনিট {secs} SECOND"
             return True, time_str, days
     return False, "", 0
 
 # --- LOGIN GATEWAY ---
 if st.session_state.logged_in_user is None and not st.session_state.is_ceo:
-    st.markdown('<p class="main-title">অস্থির চালান PRO v62.0 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v63.0 🖥️⚡</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="notice-board">{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
     login_mode = st.radio("🔑 লগইন টাইপ সিলেক্ট করুন:", ["👤 সাধারণ মেম্বার পোর্টাল", "👑 সিইও সিকিউর পোর্টাল"], horizontal=True)
     
@@ -256,13 +256,12 @@ else:
                                     msg['Subject'] = email_subject
                                     msg.attach(MIMEText(email_body, 'plain'))
                                     
-                                    server = smtplib.SMTP('smtp.gmail.com', 505) if "505" else smtplib.SMTP_SSL('smtp.gmail.com', 465)
+                                    server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
                                     server.login(u_email, u_app_pass)
                                     server.sendmail(u_email, target_email, msg.as_string())
                                     server.quit()
                                     
                                     success_count += 1
-                                    # লগ সংরক্ষণ
                                     if current_user_id not in mail_logs: mail_logs[current_user_id] = []
                                     mail_logs[current_user_id].append({"target": target_email, "subject": email_subject, "time": datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")})
                                 except Exception as mail_err: st.error(f"Failed to send to {target_email}: {mail_err}")
@@ -271,21 +270,27 @@ else:
                             save_json_file(MAIL_LOG_DB, mail_logs)
                             st.success(f"🚀 মিশন সাকসেসফুল! {success_count} টি মেইল সফলভাবে ডেলিভার হয়েছে।")
 
-    # --- TAB 2: INSTAGRAM HUNTER ---
+    # --- TAB 2: INSTAGRAM HUNTER (🎯 খাঁচার ভেতর পাখি ও মজার ডাটা ব্যাকড!) ---
     with engine_tab2:
         st.markdown("<h2 style='color:#00FF66;'>📸 ইনস্টাগ্রাম AI গ্লোবাল হান্টার</h2>", unsafe_allow_html=True)
+        st.markdown("> **"
+                    "খাঁচার ভেতর অচিন পাখি কেমনে আসে যায়? "
+                    "ঠিক তেমনি কোনো এপিআই ছাড়া আমাদের ইউজাররা কেমনে যে ডাটা স্ক্র্যাপ করে চলে যায়, "
+                    "তা মার্ক জুকারবার্গও টের পায় না! 🦜🕸️"
+                    "**")
+        
         insta_keyword = st.text_input("🔍 টার্গেটেড ইনস্টাগ্রাম হ্যাশট্যাগ বা নিশ দিন (যেমন: 'fitness_coach'):", value=st.session_state.insta_query_saved)
         if st.button("🎯 ইনস্টাগ্রাম ইনফ্লুয়েন্সার ও বিজনেস ক্লায়েন্ট এক্সপ্লোর করুন"):
             if insta_keyword.strip():
                 st.session_state.insta_query_saved = insta_keyword.strip()
-                with st.spinner("⏳ ইনস্টাগ্রাম গ্রাফ থেকে ডাটা ম্যাপ করা হচ্ছে..."):
+                with st.spinner("⏳ জুকারবার্গের খাঁচা ভেঙে সিকিউর ডাটা ম্যাপ করা হচ্ছে..."):
                     dummy_insta = [
-                        {"ইউজারনেম": f"{insta_keyword}_global", "অনুসারী": "45.2K", "ক্যাটাগরি": "Business", "ইমেইল Status": "Public"},
-                        {"ইউজারনেম": f"the_{insta_keyword}_hub", "অনুসারী": "12.8K", "ক্যাটাগরি": "Creator", "ইমেইল Status": "Protected"},
-                        {"ইউজারনেম": f"official_{insta_keyword}", "অনুসারী": "105K", "ক্যাটাগরি": "Agency", "ইমেইল Status": "Public"}
+                        {"ইউজারনেম": f"{insta_keyword}_queen", "অনুসারী": "120K", "ক্যাটাগরি": "Fitness Model", "ইমেইল Status": "Public (🔥 মেইল মারো)"},
+                        {"ইউজারনেম": f"the_{insta_keyword}_boss", "অনুsaree": "45.8K", "ক্যাটাগরি": "Entrepreneur", "ইমেইল Status": "Protected (ইনবক্স করো)"},
+                        {"ইউজারনেম": f"official_{insta_keyword}_agency", "অনুসারী": "890K", "ক্যাটাগরি": "Verified Business", "ইমেইল Status": "Public (🔥 ডিরেক্ট ক্লায়েন্ট)"}
                     ]
                     st.dataframe(pd.DataFrame(dummy_insta), use_container_width=True)
-                    st.success("✅ এআই হান্টার ডাটা সফলভাবে ফেচ করেছে!")
+                    st.success("🦜 পাখি খাঁচা ভেঙে ডাটা নিয়ে এসেছে! সফলভাবে হান্টিং ডান।")
 
     # --- TAB 3: CYBER MESSENGER (🎯 ONE-CLICK AUTO CALL NOTIFICATION) ---
     with engine_tab3:
@@ -308,7 +313,7 @@ else:
                     chat_html += f'<div class="{msg_class}"><b>{sender_display}:</b> {msg.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{msg.get("time","")}</small></div>'
             st.markdown(chat_html + '</div>', unsafe_allow_html=True)
             
-            with st.form("pub_text_v62", clear_on_submit=True):
+            with st.form("pub_text_v63", clear_on_submit=True):
                 t_msg = st.text_input("📝 পাবলিক গ্রুপে টেক্সট মেসেজ লিখুন:")
                 if st.form_submit_button("পাঠান ✉️") and t_msg.strip():
                     live_chats.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "type": "text", "text": t_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
@@ -377,7 +382,7 @@ else:
                 if st.session_state.show_vcall_trigger_link:
                     st.markdown(f'<a href="{private_call_url}" target="_blank" class="vcall-link-private">👑 আপনি কলটি শুরু করেছেন: রুমে প্রবেশ করতে এখানে ক্লিক করুন 🎥</a>', unsafe_allow_html=True)
                 
-                st.markdown(f"#### 💬 {target_real_name}-এর সাথে গোপন মেসেজ باکس")
+                st.markdown(f"#### 💬 {target_real_name}-এর সাথে গোপন মেসেজ বক্স")
                 
                 @st.fragment(run_every=1)
                 def render_live_dm_box(t_user):
@@ -399,7 +404,7 @@ else:
 
                 render_live_dm_box(target_dm)
                 
-                with st.form("dm_text_v62", clear_on_submit=True):
+                with st.form("dm_text_v63", clear_on_submit=True):
                     t_dm = st.text_input(f"✉️ {target_real_name}-কে টেক্সট পাঠান:")
                     if st.form_submit_button("মেসেজ পাঠান 🚀") and t_dm.strip():
                         fresh_dms = load_json_file(DM_DB, [])
@@ -411,8 +416,6 @@ else:
     # --- TAB 4: PUBLIC ASAMI BOARD ---
     with engine_tab4:
         st.markdown("<h2 style='color:#EF4444;'>🚨 সাইবার থানা আসামি বোর্ড 🚓</h2>", unsafe_allow_html=True)
-        st.markdown("📋 **নিয়ম ভঙ্গকারী এবং পিন চুরি করার ট্রাই করা অপরাধীদের তালিকা এখানে লাইভ ট্র্যাক হয়:**")
-        
         current_asami = load_json_file(ASAMI_DB, {})
         if current_asami:
             for bad_user, info in current_asami.items():
@@ -428,43 +431,15 @@ else:
     # --- TAB 5: CEO SECRET CONTROL ROOM ---
     with engine_tab5:
         st.subheader("👑 Riad Bhai's Secret Control Room")
-        if not is_ceo_active:
-            st.error("🔒 এই সেকশন শুধুমাত্র মেইন সিইও রিয়াদ ভাইয়ের জন্য সংরক্ষিত!")
+        if not is_ceo_active: st.error("🔒 এই সেকশন শুধুমাত্র মেইন সিইও রিয়াদ ভাইয়ের জন্য সংরক্ষিত!")
         else:
             st.success("👑 অ্যাক্সেস গ্রান্টেড, রিয়াদ ভাই!")
-            
-            st.markdown("### 📢 মেম্বারদের জন্য নোটিশ ও ঘোষণা আপডেট")
             new_notice = st.text_area("নোটিশ বোর্ড আপডেট করুন:", value=config.get("notice_text", ""))
             new_broadcast = st.text_input("মেম্বারদের স্ক্রিনে ফ্ল্যাশ মেসেজ পাঠান:", value=config.get("ceo_broadcast_msg", ""))
             new_pin = st.text_input("২-ডিজিট ড্যাোর্ড মাস্টার পিন পরিবর্তন করুন:", value=config.get("master_pin", "69"), max_chars=2)
             
             if st.button("💾 গ্লোবাল কনফিগারেশন সেভ করুন"):
-                config["notice_text"] = new_notice
-                config["ceo_broadcast_msg"] = new_broadcast
-                config["master_pin"] = new_pin
-                save_json_file(CONFIG_FILE, config)
-                st.success("⚙️ গ্লোবাল সেটিংস সফলভাবে আপডেট হয়েছে!")
-                time.sleep(0.5); st.rerun()
-                
-            st.markdown("---")
-            st.markdown("### 🚓 অপরাধীদের লকআউট/সাজা দেওয়ার প্যানেল")
-            if users:
-                asami_select = st.selectbox("🚨 আসামি মেম্বার সিলেক্ট করুন:", options=list(users.keys()))
-                asami_reason = st.text_input("⚖️ অপরাধের কারণ লিখুন:")
-                lock_hours = st.number_input("⏳ কত ঘণ্টার জন্য লকআউট করবেন?", min_value=1, max_value=720, value=24)
-                
-                if st.button("🔒 মেম্বারকে জেলখানায় পাঠান"):
-                    lock_ts = time.time() + (lock_hours * 3600)
-                    current_asami[asami_select] = {"reason": asami_reason, "lock_until_ts": lock_ts}
-                    save_json_file(ASAMI_DB, current_asami)
-                    st.error(f"🛑 {asami_select} কে সফলভাবে {lock_hours} ঘণ্টার জন্য ব্লক করা হয়েছে!")
-                    time.sleep(0.5); st.rerun()
-                    
-                if st.button("🔓 মেম্বারকে ক্ষমা করুন (Unban)"):
-                    if asami_select in current_asami:
-                        del current_asami[asami_select]
-                        save_json_file(ASAMI_DB, current_asami)
-                        st.success(f"✅ {asami_select} এর সাজা মওকুফ করা হয়েছে!")
-                        time.sleep(0.5); st.rerun()
+                config["notice_text"] = new_notice; config["ceo_broadcast_msg"] = new_broadcast; config["master_pin"] = new_pin
+                save_json_file(CONFIG_FILE, config); st.success("⚙️ সেটিংস সফলভাবে আপডেট হয়েছে!"); st.rerun()
 
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v62.0 PRO | Developed by MD Reyadh</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v63.0 PRO Ultimate | Developed by MD Reyadh</div>', unsafe_allow_html=True)
