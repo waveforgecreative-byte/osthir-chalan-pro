@@ -52,7 +52,7 @@ dm_messages = st.session_state.dm_cache
 asami_list = st.session_state.asami_cache
 mail_logs = st.session_state.mail_logs
 
-st.set_page_config(page_title="অস্থির চালান PRO v52.0 🖥️⚡", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v54.0 🖥️⚡", page_icon="🥷", layout="wide")
 
 # --- CUSTOM CSS UI ---
 st.markdown("""
@@ -65,7 +65,8 @@ st.markdown("""
     .notice-board { background-color: #0F172A; border-left: 4px solid #38BDF8; padding: 15px; border-radius: 8px; margin-bottom: 25px; color: #F1F5F9; }
     .notification-alert { background: linear-gradient(90deg, #1E3A8A, #0F172A); border-left: 6px solid #3B82F6; padding: 15px; border-radius: 8px; color: #93C5FD; font-weight: bold; margin-bottom: 15px; font-family: 'Hind Siliguri', sans-serif; }
     .lock-box { background: linear-gradient(90deg, #450A0A, #1A0505); border-left: 6px solid #EF4444; padding: 20px; border-radius: 8px; color: #FCA5A5; font-weight: bold; margin-bottom: 20px; }
-    .chat-box { height: 400px; overflow-y: auto; background: #090D16; border: 1px solid #1E293B; padding: 15px; border-radius: 8px; }
+    .asami-card { background: #111827; border: 1px solid #EF4444; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .chat-box { height: 350px; overflow-y: auto; background: #090D16; border: 1px solid #1E293B; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
     .msg-incoming { background: #1E293B; color: #F1F5F9; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 80%; border-left: 3px solid #38BDF8; }
     .msg-outgoing { background: #0F2D1E; color: #00FF66; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; margin-left: auto; width: fit-content; max-width: 80%; border-right: 3px solid #00FF66; }
     .vcall-btn-group { background: linear-gradient(90deg, #00FF66, #007A3D) !important; color: black !important; font-weight: bold !important; border-radius: 8px !important; text-align: center; padding: 10px; text-decoration: none; display: inline-block; width: 100%; margin-bottom: 15px; }
@@ -92,16 +93,13 @@ def check_user_lock(u_id):
             del asami_list[u_id]; save_json_file(ASAMI_DB, asami_list)
     return False, ""
 
-# --- 🔥 BACKGROUND AUTO-PILOT ENGINE ---
-# এই ফাংশনটা ব্যাকগ্রাউন্ডে নিজে নিজেই ওল্ড ডাটা চেক করে মেইল পাঠাবে এবং বাংলা নোটিফিকেশন জেনারেট করবে
+# --- BACKGROUND AUTO-PILOT ENGINE ---
 def run_autopilot_followup(sender_id, s_email, s_pass, s_name):
     if not s_email or not s_pass: return
     
     current_ts = time.time()
-    three_days_sec = 0  # টেস্টিং এর সুবিধার্থে ০ সেকেন্ড করা (৩ দিন করতে ২৫৯২০০ সে. দিবেন)
+    three_days_sec = 0  
     auto_sent_names = []
-    
-    # ব্যাকগ্রাউন্ড ডাটায় লুপ চালনা
     to_update_logs = False
     smtp_server = None
     
@@ -126,12 +124,11 @@ def run_autopilot_followup(sender_id, s_email, s_pass, s_name):
                     
                     smtp_server.sendmail(s_email.strip(), email_addr, msg.as_string())
                     
-                    # লগ আপডেট
                     mail_logs[email_addr]["step"] = 2
                     mail_logs[email_addr]["last_sent_timestamp"] = current_ts
                     auto_sent_names.append(c_name)
                     to_update_logs = True
-                    time.sleep(2) # ডিফেন্স গ্যাপ
+                    time.sleep(2) 
                 except:
                     continue
                     
@@ -143,7 +140,7 @@ def run_autopilot_followup(sender_id, s_email, s_pass, s_name):
 
 # --- LOGIN GATEWAY ---
 if st.session_state.logged_in_user is None and not st.session_state.is_ceo:
-    st.markdown('<p class="main-title">অস্থির চালান PRO v52.0 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v54.0 🖥️⚡</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="notice-board">{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
     login_mode = st.radio("🔑 লগইন টাইপ সিলেক্ট করুন:", ["👤 সাধারণ মেম্বার পোর্টাল", "👑 সিইও সিকিউর পোর্টাল"], horizontal=True)
     
@@ -176,7 +173,6 @@ else:
     is_ceo_active = st.session_state.is_ceo
     user_real_name = "MD Reyadh" if is_ceo_active else users[current_user_id].get("name", current_user_id)
     
-    # ডাটা লোড
     saved_api = config.get("ceo_saved_api", "") if is_ceo_active else users.get(current_user_id, {}).get("user_api_key", "")
     saved_company = config.get("ceo_company", "Reyadh Agency") if is_ceo_active else users.get(current_user_id, {}).get("company_name", "")
     saved_role = config.get("ceo_role", "Founder & CEO") if is_ceo_active else users.get(current_user_id, {}).get("user_role", "CEO")
@@ -184,20 +180,17 @@ else:
     saved_email = config.get("ceo_email", "") if is_ceo_active else users.get(current_user_id, {}).get("sender_email", "")
     saved_app_pass = config.get("ceo_app_pass", "") if is_ceo_active else users.get(current_user_id, {}).get("app_pass", "")
 
-    # 🚀 লগইন হওয়া মাত্রই ব্যাকগ্রাউন্ড অটো-ফলোআপ ইঞ্জিন রান করবে (কোনো ক্লিক ছাড়া)
     if saved_email and saved_app_pass:
         run_autopilot_followup(current_user_id, saved_email, saved_app_pass, user_real_name)
 
-    # 📢 বাংলা নোটিফিকেশন বার (যদি কোনো অটো ফলো-আপ মেইল গিয়ে থাকে)
     if st.session_state.notification_trigger:
         clients_str = ", ".join(st.session_state.notification_trigger)
         st.markdown(f"""
         <div class="notification-alert">
             🔔 <b>অস্থির নোটিফিকেশন:</b> রিয়াদ ভাই! ড্যাশবোর্ড বুট হওয়ার সাথে সাথে আপনার আগের স্ক্র্যাপ করা ওল্ড ক্লায়েন্ট 
-            <span style='color:#00FF66;'>[{clients_str}]</span>-দের কাছে ব্যাকগ্রাউন্ডে অটোমেটিক ফলো-আপ মেইল পাঠানো হয়েছে! আপনার কোনো বাটন টেপা লাগেনি। 🚀⚡
+            <span style='color:#00FF66;'>[{clients_str}]</span>-দের কাছে ব্যাকগ্রাউন্ডে অটোমেটিক ফলো-আপ মেইল পাঠানো হয়েছে! 🚀⚡
         </div>
         """, unsafe_allow_html=True)
-        # একবার দেখানোর পর ট্রিগার খালি করে দেওয়া যাতে বারবার পপআপ না আসে
         st.session_state.notification_trigger = []
 
     if is_ceo_active: st.markdown(f'<div class="welcome-banner">👑 স্বাগতম রিয়াদ ভাই! মেইন সিইও প্যানেল একটিভ।</div>', unsafe_allow_html=True)
@@ -218,23 +211,22 @@ else:
         "👑 CEO Secret Control Room"
     ])
 
-    # --- TAB 1: GOOGLE MAPS & INNER COLD MAIL ENGINE ---
+    # --- TAB 1: GOOGLE MAPS ---
     with engine_tab1:
         st.subheader("📍 Google Maps Live Scraping & Integrated Cold Mailer")
         if is_current_user_locked:
             st.markdown(f'<div class="lock-box">❌ অ্যাক্সেস ডিনাইড! সিইও রিয়াদ ভাই লক করেছেন। সাজার মেয়াদ আরও {remaining_lock_time} বাকি!</div>', unsafe_allow_html=True)
         else:
-            # --- PROFILE & SECURITY SETTINGS STORAGE ---
             st.markdown("### ⚙️ ইউজার প্রোফাইল ও সিকিউরিটি কনফিগারেশন")
             p_col1, p_col2, p_col3 = st.columns(3)
             u_api_key = p_col1.text_input("🔑 SerpApi Key:", type="password", value=saved_api)
             u_company = p_col2.text_input("🏢 আপনার কোম্পানির নাম:", value=saved_company)
-            u_role = p_col3.text_input("👔 আপনার পদবি (যেমন: CEO / Founder):", value=saved_role)
+            u_role = p_col3.text_input("👔 আপনার পদবি:", value=saved_role)
             
             p_col4, p_col5 = st.columns(2)
-            u_services = p_col4.text_input("⚡ আপনার সার্ভিসসমূহ (কমা দিয়ে লিখুন):", value=saved_services)
-            u_email = p_col5.text_input("📧 সেন্ডার জিমেইল (Gmail SMTP):", value=saved_email)
-            u_app_pass = st.text_input("🔒 জিমেইল অ্যাপ পাসওয়ার্ড (App Password):", type="password", value=saved_app_pass)
+            u_services = p_col4.text_input("⚡ আপনার সার্ভিসসমূহ:", value=saved_services)
+            u_email = p_col5.text_input("📧 সেন্ডার জিমেইল:", value=saved_email)
+            u_app_pass = st.text_input("🔒 জিমেইল অ্যাপ পাসওয়ার্ড:", type="password", value=saved_app_pass)
             
             if st.button("💾 প্রোফাইল ডাটা পার্মানেন্ট সেভ করুন"):
                 if is_ceo_active:
@@ -247,17 +239,17 @@ else:
                     users[current_user_id]["user_role"] = u_role.strip(); users[current_user_id]["services"] = u_services.strip()
                     users[current_user_id]["sender_email"] = u_email.strip(); users[current_user_id]["app_pass"] = u_app_pass.strip()
                     save_json_file(USER_DB, users)
-                st.success("✅ সমস্ত কনফিগারেশন ডাটাবেজে লক করা হয়েছে!")
+                st.success("✅ কনফিগারেশন সেভ হয়েছে!")
                 time.sleep(0.5); st.rerun()
 
             st.markdown("---")
             st.markdown("### 🔍 লাইভ ডাটা স্ক্র্যাপিং রাডার")
             sc_col1, sc_col2 = st.columns(2)
             search_query = sc_col1.text_input("গুগল ম্যাপস সার্চ কিওয়ার্ড (যেমন: Gym in New York):")
-            max_results = sc_col2.number_input("সর্বোচ্চ লিড সংখ্যা (অটো সিকিউরড):", min_value=1, max_value=100, value=10)
+            max_results = sc_col2.number_input("সর্বোচ্চ লিড সংখ্যা:", min_value=1, max_value=100, value=10)
             
-            if st.button("📍 লাইভ স্ক্র্যাপার রান করুন ⚡") and search_query.strip() and saved_api:
-                with st.spinner("গুগল ম্যাপস থেকে লাইভ কাস্টমার ডাটাবেজ এক্সট্র্যাক্ট হচ্ছে..."):
+            if st.button("📍 লাইভ স্ক্র্যাপার run করুন ⚡") and search_query.strip() and saved_api:
+                with st.spinner("ডাটা এক্সট্র্যাক্ট হচ্ছে..."):
                     res = requests.get("https://serpapi.com/search.json", params={"engine": "google_maps", "q": search_query.strip(), "api_key": saved_api, "num": int(max_results)})
                     if res.status_code == 200:
                         local_results = res.json().get("local_results", [])
@@ -267,41 +259,31 @@ else:
                             website = item.get("website", "None")
                             clean_domain = website.replace("https://", "").replace("http://", "").replace("www.", "") if website else ""
                             raw_domain = clean_domain.split("/")[0] if clean_domain else ""
-                            
-                            if raw_domain:
-                                combined_emails = f"info@{raw_domain}, hello@{raw_domain}, contact@{raw_domain}"
-                            else:
-                                combined_emails = "None"
-                                
+                            combined_emails = f"info@{raw_domain}, hello@{raw_domain}, contact@{raw_domain}" if raw_domain else "None"
                             leads_list.append({"Name": title, "Email": combined_emails, "Website": website, "Phone": item.get("phone", "None")})
                         st.session_state.current_leads = leads_list
-                        st.success(f"✅ সফলভাবে {len(leads_list)}টি কাস্টমার লিড মেমোরিতে লোড হয়েছে!")
+                        st.success(f"✅ সফলভাবে {len(leads_list)}টি লিড মেমোরিতে লোড হয়েছে!")
             
             if st.session_state.current_leads:
                 st.dataframe(pd.DataFrame(st.session_state.current_leads), use_container_width=True)
                 
-                # --- COLD EMAIL PANEL ---
                 st.markdown("---")
                 st.markdown("### 📧 কাস্টমাইজড কোল্ড মেইল থ্রাস্টার")
-                
                 custom_subject = st.text_input("✉️ প্রধান ইমেইল সাবজেক্ট:", value="Exclusive Proposal for {Client Name}")
-                mail_speech = st.text_area("📝 প্রধান কাস্টম মেইল বডি:", 
-                                           value="Hello {Client Name},\n\nI was reviewing your business profile at {Business Name}.\nWe specialize in {Your Services}.\n\nBest Regards,\n{Sender Name}")
+                mail_speech = st.text_area("📝 প্রধান কাস্টম মেইল বডি:", value="Hello {Client Name},\n\nWe specialize in {Your Services}.\n\nBest Regards,\n{Sender Name}")
 
                 if st.button("🔥 প্রধান মেইল ফায়ার করুন"):
                     if not saved_email or not saved_app_pass:
-                        st.error("❌ আগে প্রোফাইল সেকশনে জিমেইল ও অ্যাপ পাসওয়ার্ড সেভ করুন!")
+                        st.error("❌ আগে প্রোফাইল সেকশনে জিমেইল ডাটা সেভ করুন!")
                     else:
                         try:
                             server = smtplib.SMTP("smtp.gmail.com", 587)
-                            server.starttls()
-                            server.login(saved_email.strip(), saved_app_pass.strip())
+                            server.starttls(); server.login(saved_email.strip(), saved_app_pass.strip())
                             sent_count = 0
                             
                             for idx, lead in enumerate(st.session_state.current_leads):
                                 raw_emails = lead.get('Email', 'None')
                                 if raw_emails == "None": continue
-                                
                                 email_list = [e.strip() for e in raw_emails.split(",") if "@" in e]
                                 if not email_list: continue
                                     
@@ -309,46 +291,32 @@ else:
                                 dynamic_subject = custom_subject.replace("{Client Name}", client_name_val)
                                 custom_body = mail_speech.replace("{Client Name}", client_name_val).replace("{Your Services}", saved_services).replace("{Sender Name}", user_real_name)
                                 
-                                mail_sent_for_this_client = False
-                                chosen_email = ""
+                                mail_sent_for_this_client = False; chosen_email = ""
                                 for target_mail in email_list:
                                     try:
                                         msg = MIMEMultipart()
-                                        msg['From'] = saved_email.strip()
-                                        msg['To'] = target_mail
-                                        msg['Subject'] = dynamic_subject
+                                        msg['From'] = saved_email.strip(); msg['To'] = target_mail; msg['Subject'] = dynamic_subject
                                         msg.attach(MIMEText(custom_body, 'plain'))
-                                        
                                         server.sendmail(saved_email.strip(), target_mail, msg.as_string())
-                                        mail_sent_for_this_client = True
-                                        chosen_email = target_mail
-                                        break
+                                        mail_sent_for_this_client = True; chosen_email = target_mail; break
                                     except: continue
                                 
                                 if mail_sent_for_this_client:
                                     sent_count += 1
-                                    # ডাটাবেজে ওল্ড লিড হিসেবে ট্র্যাকিং লক করা হচ্ছে
-                                    mail_logs[chosen_email] = {
-                                        "client_name": client_name_val,
-                                        "sender_id": current_user_id,
-                                        "last_sent_timestamp": time.time(),
-                                        "step": 1
-                                    }
+                                    mail_logs[chosen_email] = {"client_name": client_name_val, "sender_id": current_user_id, "last_sent_timestamp": time.time(), "step": 1}
                                     save_json_file(MAIL_LOG_DB, mail_logs)
                                 time.sleep(2)
-                                
                             server.quit()
-                            if sent_count > 0: st.success(f"🔥 সফলভাবে {sent_count}টি মেইল সেন্ট এবং ডাটাবেজে লক করা হয়েছে!")
-                        except Exception as e: st.error(f"❌ SMTP ফেল করেছে: {str(e)}")
+                            if sent_count > 0: st.success(f"🔥 সফলভাবে {sent_count}টি মেইল পাঠানো ও ট্র্যাকিং লক করা হয়েছে!")
+                        except Exception as e: st.error(f"❌ SMTP ফেল: {str(e)}")
 
-    # --- TAB 2: INSTAGRAM HUNTER WITH TOP COUNTRIES ---
+    # --- TAB 2: INSTAGRAM HUNTER ---
     with engine_tab2:
         st.markdown("<h2 style='color:#00FF66;'>📸 ইনস্টাগ্রাম AI গ্লোবাল হান্টার</h2>", unsafe_allow_html=True)
-        target_category = st.selectbox("🎯 ক্লায়েন্ট ক্যাটাগরি সিলেক্ট করুন:", options=["Real Estate Agents", "Fitness Coaches", "E-commerce Brands", "Custom Category"])
-        inst_query = st.text_input("🔍 কাস্টম ক্যাটাগরি নাম লিখুন:") if target_category == "Custom Category" else target_category
-        
-        country_mode = st.selectbox("🌍 টার্গেটেড কান্ট্রি ফিল্টার করুন:", options=["United States (USA)", "United Kingdom (UK)", "Canada", "Australia", "Custom Country"])
-        final_country = st.text_input("✍️ কাস্টম দেশের নাম বা রিজিয়ন লিখুন:") if country_mode == "Custom Country" else country_mode
+        target_category = st.selectbox("🎯 ক্লায়েন্ট ক্যাটাগরি:", options=["Real Estate Agents", "Fitness Coaches", "E-commerce Brands", "Custom Category"])
+        inst_query = st.text_input("🔍 কাস্টম ক্যাটাগরি নাম:") if target_category == "Custom Category" else target_category
+        country_mode = st.selectbox("🌍 টার্গেটেড কান্ট্রি ফিল্টার:", options=["United States (USA)", "United Kingdom (UK)", "Canada", "Australia", "Custom Country"])
+        final_country = st.text_input("✍️ কাস্টম দেশের নাম:") if country_mode == "Custom Country" else country_mode
 
         if st.button("🚀 গ্লোবাল হান্টিং রাডার অ্যাক্টিভেট করুন") and inst_query.strip():
             st.session_state.insta_query_saved = f"{inst_query.strip()} in {final_country}"
@@ -357,7 +325,7 @@ else:
             final_google_query = f'site:instagram.com "{st.session_state.insta_query_saved}"'
             st.markdown(f'<a href="https://www.google.com/search?q={urllib.parse.quote(final_google_query)}" target="_blank"><button style="background-color:#4285F4; color:white; padding:12px; border:none; border-radius:8px; width:100%; cursor:pointer; font-weight:bold;">🎯 গুগল এক্স-রে ফিল্টারে {st.session_state.insta_query_saved} হান্ট করুন</button></a>', unsafe_allow_html=True)
 
-    # --- TAB 3: CYBER MESSENGER & MEDIA ROOM ---
+    # --- TAB 3: CYBER MESSENGER & MEDIA ROOM (🔒 1:1 PERSONAL CHAT INTERFACE OVERHAUL) ---
     with engine_tab3:
         st.markdown("### 🔊 সাইবার মাল্টিমিডিয়া চ্যাট ও ভয়েস/ভিডিও মেকানিজম")
         chat_sub1, chat_sub2 = st.tabs(["🔊 Global Public Chat Room", "🔒 Secret 1:1 Personal DM Portal"])
@@ -373,7 +341,7 @@ else:
                 chat_html += f'<div class="{msg_class}"><b>{sender_display}:</b> {msg.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{msg.get("time","")}</small></div>'
             st.markdown(chat_html + '</div>', unsafe_allow_html=True)
             
-            with st.form("pub_text_v52", clear_on_submit=True):
+            with st.form("pub_text_v54", clear_on_submit=True):
                 t_msg = st.text_input("📝 টেক্সট মেসেজ লিখুন:")
                 if st.form_submit_button("পাঠান ✉️") and t_msg.strip():
                     chat_messages.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "type": "text", "text": t_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
@@ -381,28 +349,50 @@ else:
         
         with chat_sub2:
             all_users_list = [u for u in users.keys() if u != current_user_id]
-            default_index = all_users_list.index(st.session_state.active_dm_user) if st.session_state.active_dm_user in all_users_list else 0
+            
             if all_users_list:
-                target_dm = st.selectbox("মেম্বার সিলেক্ট করুন:", options=all_users_list, index=default_index)
+                default_index = all_users_list.index(st.session_state.active_dm_user) if st.session_state.active_dm_user in all_users_list else 0
+                target_dm = st.selectbox("🔒 কার সাথে পার্সোনাল চ্যাট ও কল করতে চান? মেম্বার সিলেক্ট করুন:", options=all_users_list, index=default_index)
+                
                 if target_dm:
                     st.session_state.active_dm_user = target_dm
                     sorted_pair = sorted([str(current_user_id), str(target_dm)])
                     private_call_url = f"https://meet.jit.si/reyadh-private-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
-                    st.markdown(f'<a href="{private_call_url}" target="_blank" class="vcall-btn-private">🔒 প্রাইভেট ভিডিও কল লিঙ্ক 🔒🎥</a>', unsafe_allow_html=True)
                     
+                    # ১. ভিডিও কল লিঙ্ক সেকশন
+                    st.markdown(f'<a href="{private_call_url}" target="_blank" class="vcall-btn-private">🔒 {users.get(target_dm, {}).get("name", target_dm)}-এর সাথে প্রাইভেট ভিডিও কল লিঙ্ক 🎥</a>', unsafe_allow_html=True)
+                    
+                    # ২. পার্সোনাল চ্যাট হিস্ট্রি উইন্ডো (১:১ টেক্সট চ্যাট)
+                    st.markdown(f"#### 💬 {users.get(target_dm, {}).get('name', target_dm)}-এর সাথে গোপন মেসেজ বক্স")
                     dm_html = '<div class="chat-box">'
                     filtered_dms = [d for d in dm_messages if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == target_dm) or (d.get("sender") == target_dm and d.get("receiver") == current_user_id))]
-                    for dm in filtered_dms:
-                        dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else users.get(dm.get("sender"), {}).get("name", dm.get("sender"))
-                        dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
-                        dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{dm.get("time","")}</small></div>'
-                    st.markdown(dm_html + '</div>', unsafe_allow_html=True)
                     
-                    with st.form("dm_text_v52", clear_on_submit=True):
-                        t_dm = st.text_input("গোপন মেসেজ:")
-                        if st.form_submit_button("ডিএম পাঠান 🔐") and t_dm.strip():
-                            dm_messages.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "receiver": target_dm, "type": "text", "text": t_dm.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
-                            save_json_file(DM_DB, dm_messages); st.rerun()
+                    if filtered_dms:
+                        for dm in filtered_dms:
+                            dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else users.get(dm.get("sender"), {}).get("name", dm.get("sender"))
+                            dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
+                            dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{dm.get("time","")}</small></div>'
+                    else:
+                        dm_html += '<div style="color:#64748B; text-align:center; padding-top:150px;">কোনো মেসেজ নেই। নিচে টাইপ করে সিক্রেট চ্যাট শুরু করুন! 🤐</div>'
+                        
+                    dm_html += '</div>'
+                    st.markdown(dm_html, unsafe_allow_html=True)
+                    
+                    # ৩. পার্সোনাল মেসেজ পাঠানোর ফর্ম
+                    with st.form("dm_text_v54", clear_on_submit=True):
+                        t_dm = st.text_input(f"✉️ {users.get(target_dm, {}).get('name', target_dm)}-কে গোপন টেক্সট পাঠান:")
+                        if st.form_submit_button("মেসেজ পাঠান 🚀") and t_dm.strip():
+                            dm_messages.append({
+                                "sender": "CEO 👑" if is_ceo_active else current_user_id, 
+                                "receiver": target_dm, 
+                                "type": "text", 
+                                "text": t_dm.strip(), 
+                                "time": datetime.datetime.now().strftime("%I:%M %p")
+                            })
+                            save_json_file(DM_DB, dm_messages)
+                            st.rerun()
+            else:
+                st.info("👥 ড্যাশবোর্ডে চ্যাট করার মতো অন্য কোনো মেম্বার এখনও অ্যাকাউন্ট খোলেনি!")
 
     # --- TAB 4: PUBLIC ASAMI BOARD ---
     with engine_tab4:
@@ -412,9 +402,9 @@ else:
                 check_user_lock(a_id)
                 st.markdown(f"""
                 <div class="asami-card">
-                    <h4>👤 আসামি: {users.get(a_id, {}).get('name', a_id)} (ID: {a_id})</h4>
-                    <p>❌ <b>অপরাধ:</b> {a_info.get('crime')}</p>
-                    <p>⏳ <b>মেüedad:</b> <span style="color:#FF0000; font-weight:bold;">{a_info.get('duration')} দিন</span></p>
+                    <h4 style="color:#FFF;">👤 আসামি: {users.get(a_id, {}).get('name', a_id)} (ID: {a_id})</h4>
+                    <p style="color:#FFAAAA;">❌ <b>অপরাধ:</b> {a_info.get('crime')}</p>
+                    <p style="color:#FFF;">⏳ <b>মেয়াদ:</b> <span style="color:#FF3333; font-weight:bold;">{a_info.get('duration')} দিন</span></p>
                 </div>
                 """, unsafe_allow_html=True)
         else: st.info("🕊️ ড্যাশবোর্ডে এখন কোনো আসামি নেই!")
@@ -428,7 +418,7 @@ else:
             with c_col1:
                 all_users_avail = list(users.keys())
                 if all_users_avail:
-                    target_suspect = st.selectbox("কাকে আসামি বানাবেন?", options=all_users_avail, key="suspect_box_v52")
+                    target_suspect = st.selectbox("কাকে আসামি বানাবেন?", options=all_users_avail, key="suspect_box_v54")
                     crime_note = st.text_input("অপরাধের কারণ লিখুন:")
                     lock_days = st.number_input("🔒 লক করার দিন (Days):", min_value=1, max_value=30, value=2)
                     if st.button("🔨 রায় ঘোষণা করুন", use_container_width=True):
@@ -442,4 +432,4 @@ else:
                         if free_suspect in asami_list: del asami_list[free_suspect]; save_json_file(ASAMI_DB, asami_list); st.success("মুক্ত করা হয়েছে!"); time.sleep(0.5); st.rerun()
         else: st.error("🔒 এই সেকশনটি শুধুমাত্র মেইন সিইও পোর্টাল দিয়ে এক্সেস করা যাবে।")
 
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v52.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v54.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
