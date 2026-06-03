@@ -51,7 +51,7 @@ dm_messages = st.session_state.dm_cache
 asami_list = st.session_state.asami_cache
 mail_logs = st.session_state.mail_logs
 
-st.set_page_config(page_title="অস্থির চালান PRO v59.0 🖥️⚡", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v60.0 🖥️⚡", page_icon="🥷", layout="wide")
 
 # --- CUSTOM CSS UI ---
 st.markdown("""
@@ -73,6 +73,9 @@ st.markdown("""
     .vcall-link-btn { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #00FF66, #007A3D) !important; color: #000000 !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: none !important; box-shadow: 0 4px 15px rgba(0, 255, 102, 0.3); transition: 0.3s; }
     .vcall-link-btn:hover { transform: scale(1.01); background: linear-gradient(90deg, #00FF88, #00994D) !important; color: #000 !important; text-decoration: none !important; }
     
+    .vcall-link-private { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #FF007F, #7928CA) !important; color: #FFFFFF !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: none !important; box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3); transition: 0.3s; }
+    .vcall-link-private:hover { transform: scale(1.01); background: linear-gradient(90deg, #FF3399, #8B3DD9) !important; color: #FFF !important; text-decoration: none !important; }
+    
     .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; color: #64748B; z-index: 999; }
     </style>
 """, unsafe_allow_html=True)
@@ -82,6 +85,7 @@ if "is_ceo" not in st.session_state: st.session_state.is_ceo = False
 if "current_leads" not in st.session_state: st.session_state.current_leads = []
 if "insta_query_saved" not in st.session_state: st.session_state.insta_query_saved = ""
 if "active_dm_user" not in st.session_state: st.session_state.active_dm_user = None
+if "show_vcall_trigger_link" not in st.session_state: st.session_state.show_vcall_trigger_link = False
 
 # --- LIVE LOCKUP TRACKER & CHECKER ---
 def check_user_lock(u_id):
@@ -95,11 +99,7 @@ def check_user_lock(u_id):
             hours = int((rem_sec % 86400) // 3600)
             mins = int((rem_sec % 3600) // 60)
             secs = int(rem_sec % 60)
-            
-            if days > 0:
-                time_str = f"{days} দিন {hours} ঘণ্টা {mins} মিনিট"
-            else:
-                time_str = f"{hours} ঘণ্টা {mins} মিনিট {secs} সেকেন্ড"
+            time_str = f"{days} দিন {hours} ঘণ্টা {mins} মিনিট" if days > 0 else f"{hours} ঘণ্টা {mins} মিনিট {secs} সেকেন্ড"
             return True, time_str, days
         else:
             if u_id in asami_list: del asami_list[u_id]; save_json_file(ASAMI_DB, asami_list)
@@ -107,7 +107,7 @@ def check_user_lock(u_id):
 
 # --- LOGIN GATEWAY ---
 if st.session_state.logged_in_user is None and not st.session_state.is_ceo:
-    st.markdown('<p class="main-title">অস্থির চালান PRO v59.0 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v60.0 🖥️⚡</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="notice-board">{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
     login_mode = st.radio("🔑 লগইন টাইপ সিলেক্ট করুন:", ["👤 সাধারণ মেম্বার পোর্টাল", "👑 সিইও সিকিউর পোর্টাল"], horizontal=True)
     
@@ -147,14 +147,9 @@ else:
     saved_email = config.get("ceo_email", "") if is_ceo_active else users.get(current_user_id, {}).get("sender_email", "")
     saved_app_pass = config.get("ceo_app_pass", "") if is_ceo_active else users.get(current_user_id, {}).get("app_pass", "")
 
-    # --- 🚨 LIVE SYSTEM SYNC GLOBAL BANNER ---
     fresh_config = load_json_file(CONFIG_FILE, DEFAULT_CONFIG)
     if fresh_config.get("ceo_broadcast_msg", ""):
-        st.markdown(f"""
-        <div class="ceo-alert">
-            👑 <b>সিইও রিয়াদ ভাইয়ের আদেশ:</b> {fresh_config.get("ceo_broadcast_msg", "")}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="ceo-alert">👑 <b>সিইও রিয়াদ ভাইয়ের আদেশ:</b> {fresh_config.get("ceo_broadcast_msg", "")}</div>', unsafe_allow_html=True)
 
     if is_ceo_active: st.markdown(f'<div class="welcome-banner">👑 স্বাগতম রিয়াদ ভাই! মেইন সিইও প্যানেল একটিভ।</div>', unsafe_allow_html=True)
     else: st.markdown(f'<div class="welcome-banner-user">🎉 স্বাগতম {user_real_name} ভাই! চলেন ক্লায়েন্ট হান্ট করা যাক... 🚀⚡</div>', unsafe_allow_html=True)
@@ -165,7 +160,6 @@ else:
 
     is_current_user_locked, remaining_lock_time, total_days_locked = check_user_lock(current_user_id)
 
-    # ক্যাটাগরি ট্যাব
     engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5 = st.tabs([
         "📍 Google Maps Scraper & Cold Mail Engine", 
         "📸 Instagram AI Global Hunter", 
@@ -178,19 +172,13 @@ else:
     with engine_tab1:
         st.subheader("📍 Google Maps Live Scraping & Integrated Cold Mailer")
         if is_current_user_locked:
-            st.markdown(f"""
-            <div class="lock-box" style="text-align:center;">
-                🛑 <b>অ্যাক্সেস ব্লকড! আপনি এখন সাইবার থানার কয়েদি!</b><br><br>
-                ⏳ আপনার বাকি সাজার মেয়াদ: <span style="color:#00FF66;"><b>{remaining_lock_time}</b></span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="lock-box" style="text-align:center;">🛑 <b>অ্যাক্সেস ব্লকড!</b><br>⏳ বাকি সাজা: {remaining_lock_time}</div>', unsafe_allow_html=True)
         else:
             st.markdown("### ⚙️ ইউজার প্রোফাইল ও সিকিউরিটি কনফিগারেশন")
             p_col1, p_col2, p_col3 = st.columns(3)
             u_api_key = p_col1.text_input("🔑 SerpApi Key:", type="password", value=saved_api)
             u_company = p_col2.text_input("🏢 আপনার কোম্পানির নাম:", value=saved_company)
             u_role = p_col3.text_input("👔 আপনার পদবি:", value=saved_role)
-            
             p_col4, p_col5 = st.columns(2)
             u_services = p_col4.text_input("⚡ আপনার সার্ভিসসমূহ:", value=saved_services)
             u_email = p_col5.text_input("📧 সেন্ডার জিমেইল:", value=saved_email)
@@ -210,54 +198,18 @@ else:
                 st.success("✅ কনফিগারেশন সেভ হয়েছে!")
                 time.sleep(0.5); st.rerun()
 
-            st.markdown("---")
-            st.markdown("### 🔍 লাইভ ডাটা স্ক্র্যাপিং রাডার")
-            sc_col1, sc_col2 = st.columns(2)
-            search_query = sc_col1.text_input("গুগল ম্যাপস সার্চ কিওয়ার্ড (যেমন: Gym in New York):")
-            max_results = sc_col2.number_input("সর্বোচ্চ লিড সংখ্যা:", min_value=1, max_value=100, value=10)
-            
-            if st.button("📍 লাইভ স্ক্র্যাপার run করুন ⚡") and search_query.strip() and saved_api:
-                with st.spinner("ডাটা এক্সট্র্যাক্ট হচ্ছে..."):
-                    res = requests.get("https://serpapi.com/search.json", params={"engine": "google_maps", "q": search_query.strip(), "api_key": saved_api, "num": int(max_results)})
-                    if res.status_code == 200:
-                        local_results = res.json().get("local_results", [])
-                        leads_list = []
-                        for item in local_results:
-                            title = item.get("title", "Business Owner")
-                            website = item.get("website", "None")
-                            clean_domain = website.replace("https://", "").replace("http://", "").replace("www.", "") if website else ""
-                            raw_domain = clean_domain.split("/")[0] if clean_domain else ""
-                            combined_emails = f"info@{raw_domain}, hello@{raw_domain}, contact@{raw_domain}" if raw_domain else "None"
-                            leads_list.append({"Name": title, "Email": combined_emails, "Website": website, "Phone": item.get("phone", "None")})
-                        st.session_state.current_leads = leads_list
-                        st.success(f"✅ সফলভাবে {len(leads_list)}টি লিড মেমোরিতে লোড হয়েছে!")
-            
-            if st.session_state.current_leads:
-                st.dataframe(pd.DataFrame(st.session_state.current_leads), use_container_width=True)
-
     # --- TAB 2: INSTAGRAM HUNTER ---
     with engine_tab2:
         st.markdown("<h2 style='color:#00FF66;'>📸 ইনস্টাগ্রাম AI গ্লোবাল হান্টার</h2>", unsafe_allow_html=True)
-        if is_current_user_locked: st.markdown(f'<div class="lock-box">🛑 সাজাপ্রাপ্ত আসামিদের জন্য রাডার সম্পূর্ণ ব্লকড!</div>', unsafe_allow_html=True)
-        else:
-            target_category = st.selectbox("🎯 ক্লায়েন্ট ক্যাটাগরি:", options=["Real Estate Agents", "Fitness Coaches", "E-commerce Brands"])
-            if st.button("🚀 গ্লোবাল হান্টিং রাডার অ্যাক্টিভেট করুন"):
-                st.session_state.insta_query_saved = target_category
-            if st.session_state.insta_query_saved:
-                final_google_query = f'site:instagram.com "{st.session_state.insta_query_saved}"'
-                st.markdown(f'<a href="https://www.google.com/search?q={urllib.parse.quote(final_google_query)}" target="_blank"><button style="background-color:#4285F4; color:white; padding:12px; border:none; border-radius:8px; width:100%; cursor:pointer; font-weight:bold;">🎯 গুগল এক্স-রে ফিল্টারে হান্ট করুন</button></a>', unsafe_allow_html=True)
 
-    # --- TAB 3: CYBER MESSENGER (🎯 REAL-NAME CALL ALERT DISPATCHER) ---
+    # --- TAB 3: CYBER MESSENGER (🎯 FIX DISPLAY NAME & POPUP REJECTION) ---
     with engine_tab3:
         st.markdown("### 🔊 সাইবার মাল্টিমিডিয়া চ্যাট ও ভয়েস/ভিডিও মেকানিজম")
-        
         chat_sub1, chat_sub2 = st.tabs(["🔊 Global Public Chat Room", "🔒 Secret 1:1 Personal DM Portal"])
         
-        @st.fragment(run_every=1)
-        def render_live_public_chat():
-            live_chats = load_json_file(CHAT_DB, [])
+        with chat_sub1:
             st.markdown('<a href="https://meet.jit.si/reyadh-osthir-chalawn-global-group" target="_blank" class="vcall-link-btn">🔊 গ্লোবাল গ্রুপ ভিডিও কল রুমে ঢুকুন 🎥🔊</a>', unsafe_allow_html=True)
-            
+            live_chats = load_json_file(CHAT_DB, [])
             chat_html = '<div class="chat-box">'
             for msg in live_chats:
                 if not isinstance(msg, dict): continue
@@ -266,119 +218,104 @@ else:
                 msg_class = "msg-outgoing" if sender_id == current_user_id else "msg-incoming"
                 chat_html += f'<div class="{msg_class}"><b>{sender_display}:</b> {msg.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{msg.get("time","")}</small></div>'
             st.markdown(chat_html + '</div>', unsafe_allow_html=True)
-
-        with chat_sub1:
-            render_live_public_chat()
-            with st.form("pub_text_v59", clear_on_submit=True):
+            
+            with st.form("pub_text_v60", clear_on_submit=True):
                 t_msg = st.text_input("📝 টেক্সট মেসেজ লিখুন:")
                 if st.form_submit_button("পাঠান ✉️") and t_msg.strip():
-                    fresh_chats = load_json_file(CHAT_DB, [])
-                    fresh_chats.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "type": "text", "text": t_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
-                    save_json_file(CHAT_DB, fresh_chats)
+                    live_chats.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "type": "text", "text": t_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
+                    save_json_file(CHAT_DB, live_chats)
                     st.rerun()
         
         with chat_sub2:
-            all_users_list = [u for u in users.keys() if u != current_user_id and u != "CEO 👑"]
-            if is_ceo_active: all_users_list = list(users.keys())
-                
-            if all_users_list:
-                default_index = all_users_list.index(st.session_state.active_dm_user) if st.session_state.active_dm_user in all_users_list else 0
-                target_dm = st.selectbox("🔒 মেম্বার সিলেক্ট করুন:", options=all_users_list, index=default_index, key="dm_select_v59")
-                
-                if target_dm:
-                    st.session_state.active_dm_user = target_dm
-                    sorted_pair = sorted([str(current_user_id), str(target_dm)])
-                    private_call_url = f"https://meet.jit.si/reyadh-private-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
-                    
-                    # 🎯 ফিক্সড: আসল নাম ধরে কলার অ্যালার্ট পুশ হবে
-                    target_display_name = users.get(target_dm, {}).get('name', target_dm)
-                    if st.button(f"📞 {target_display_name} কে সরাসরি ভিডিও কল দিন (অটো-নামসহ) 🎥", use_container_width=True):
-                        fresh_dms = load_json_file(DM_DB, [])
-                        
-                        # এখানে কলার আইডি-র বদলে 'user_real_name' (আসল নাম) ডিরেক্ট বসিয়ে দেওয়া হয়েছে
-                        alert_text = f"🚨 কলার অ্যালার্ট: {user_real_name} আপনাকে ভিডিও কলে ডাকছেন! জলদি চ্যাটবক্সের উপরের লিঙ্কে ক্লিক করে জয়েন হোন! 📲"
-                        
-                        fresh_dms.append({
-                            "sender": "CEO 👑" if is_ceo_active else current_user_id, 
-                            "receiver": target_dm, 
-                            "type": "text", 
-                            "text": alert_text, 
-                            "time": datetime.datetime.now().strftime("%I:%M %p")
-                        })
-                        save_json_file(DM_DB, fresh_dms)
-                        
-                        # জাভাস্ক্রিপ্ট দিয়ে নতুন ট্যাবে কল ওপেন
-                        js_trigger = f"""
-                        <script>
-                            window.open("{private_call_url}", "_blank");
-                        </script>
-                        """
-                        st.components.v1.html(js_trigger, height=0)
-                        st.success(f"🚀 {user_real_name} নামে নোটিফিকেশন পাঠানো হয়েছে এবং কল ওপেন হয়েছে!")
-                    
-                    st.markdown(f"#### 💬 {target_display_name}-এর সাথে গোপন মেসেজ বক্স")
-                    
-                    @st.fragment(run_every=1)
-                    def render_live_dm_box(t_user):
-                        live_dms = load_json_file(DM_DB, [])
-                        dm_html = '<div class="chat-box">'
-                        filtered_dms = [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == t_user) or (d.get("sender") == t_user and d.get("receiver") == current_user_id))]
-                        if filtered_dms:
-                            for dm in filtered_dms:
-                                dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else load_json_file(USER_DB, {}).get(dm.get("sender"), {}).get("name", dm.get("sender"))
-                                dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
-                                dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{dm.get("time","")}</small></div>'
-                        else:
-                            dm_html += '<div style="color:#64748B; text-align:center; padding-top:150px;">কোনো মেসেজ নেই।</div>'
-                        dm_html += '</div>'
-                        st.markdown(dm_html, unsafe_allow_html=True)
+            # 🎯 ফিক্সড: ড্রপডাউনে আইডির বদলে ইউজারদের আসল নাম দেখানোর মেকানিজম
+            name_to_id_map = {}
+            for u_id, u_info in users.items():
+                if u_id != current_user_id and u_id != "CEO 👑":
+                    display_label = f"{u_info.get('name', u_id)} ({u_id})"
+                    name_to_id_map[display_label] = u_id
+            
+            if is_ceo_active:
+                for u_id, u_info in users.items():
+                    display_label = f"{u_info.get('name', u_id)} ({u_id})"
+                    name_to_id_map[display_label] = u_id
 
-                    render_live_dm_box(target_dm)
-                    
-                    with st.form("dm_text_v59", clear_on_submit=True):
-                        t_dm = st.text_input(f"✉️ {target_display_name}-কে টেক্সট পাঠান:")
-                        if st.form_submit_button("মেসেজ পাঠান 🚀"):
-                            if t_dm.strip():
-                                fresh_dms = load_json_file(DM_DB, [])
-                                fresh_dms.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "receiver": target_dm, "type": "text", "text": t_dm.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
-                                save_json_file(DM_DB, fresh_dms)
-                                st.rerun()
+            if name_to_id_map:
+                all_display_names = list(name_to_id_map.keys())
+                
+                # ড্রপডাউন ইনডেক্স ঠিক রাখা
+                current_saved_target_id = st.session_state.active_dm_user
+                matched_index = 0
+                if current_saved_target_id:
+                    for idx, d_lbl in enumerate(all_display_names):
+                        if name_to_id_map[d_lbl] == current_saved_target_id:
+                            matched_index = idx; break
+                            
+                target_display_label = st.selectbox("🔒 মেম্বার সিলেক্ট করুন (সরাসরি আসল নাম ডিসপ্লে):", options=all_display_names, index=matched_index, key="dm_select_v60")
+                target_dm = name_to_id_map[target_display_label]
+                st.session_state.active_dm_user = target_dm
+                
+                sorted_pair = sorted([str(current_user_id), str(target_dm)])
+                private_call_url = f"https://meet.jit.si/reyadh-private-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
+                target_real_name = users.get(target_dm, {}).get('name', target_dm)
+                
+                # 🎯 অ্যালার্ট এবং পপআপ ফিক্স করার জন্য ডুয়াল অ্যাকশন সিস্টেম
+                c_btn1, c_btn2 = st.columns([2, 1])
+                if c_btn1.button(f"🚨 {target_real_name} এর জন্য কল অ্যালার্ট পাঠান 🔔", use_container_width=True):
+                    fresh_dms = load_json_file(DM_DB, [])
+                    alert_text = f"🚨 কলার অ্যালার্ট: {user_real_name} আপনাকে ভিডিও কলে ডাকছেন! জলদি চ্যাটবক্সের উপরের লিঙ্কে ক্লিক করে জয়েন হোন! 📲"
+                    fresh_dms.append({
+                        "sender": "CEO 👑" if is_ceo_active else current_user_id, 
+                        "receiver": target_dm, 
+                        "type": "text", 
+                        "text": alert_text, 
+                        "time": datetime.datetime.now().strftime("%I:%M %p")
+                    })
+                    save_json_file(DM_DB, fresh_dms)
+                    st.session_state.show_vcall_trigger_link = True
+                    st.success("🔔 অ্যালার্ট পাঠানো হয়েছে! নিচের লিঙ্কে ক্লিক করে রুমে ঢুকুন।")
+                
+                if c_btn2.button("🚫 কল লিঙ্ক বন্ধ করুন", use_container_width=True):
+                    st.session_state.show_vcall_trigger_link = False
+                    st.rerun()
+                
+                # 🎯 পপআপ রিজেকশন এড়াতে ডিরেক্ট HTML সিকিউর লিঙ্ক
+                if st.session_state.show_vcall_trigger_link:
+                    st.markdown(f'<a href="{private_call_url}" target="_blank" class="vcall-link-private">⚡ ব্রাউজার পপআপ প্রোটেকশন আনলকড: এখানে ক্লিক করে {target_real_name} এর রুমে প্রবেশ করুন 🎥</a>', unsafe_allow_html=True)
+                
+                st.markdown(f"#### 💬 {target_real_name}-এর সাথে গোপন মেসেজ বক্স")
+                
+                @st.fragment(run_every=1)
+                def render_live_dm_box(t_user):
+                    live_dms = load_json_file(DM_DB, [])
+                    dm_html = '<div class="chat-box">'
+                    filtered_dms = [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == t_user) or (d.get("sender") == t_user and d.get("receiver") == current_user_id))]
+                    if filtered_dms:
+                        for dm in filtered_dms:
+                            dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else load_json_file(USER_DB, {}).get(dm.get("sender"), {}).get("name", dm.get("sender"))
+                            dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
+                            dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{dm.get("time","")}</small></div>'
+                    else:
+                        dm_html += '<div style="color:#64748B; text-align:center; padding-top:150px;">কোনো মেসেজ নেই।</div>'
+                    dm_html += '</div>'
+                    st.markdown(dm_html, unsafe_allow_html=True)
+
+                render_live_dm_box(target_dm)
+                
+                with st.form("dm_text_v60", clear_on_submit=True):
+                    t_dm = st.text_input(f"✉️ {target_real_name}-কে টেক্সট পাঠান:")
+                    if st.form_submit_button("মেসেজ পাঠান 🚀") and t_dm.strip():
+                        fresh_dms = load_json_file(DM_DB, [])
+                        fresh_dms.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "receiver": target_dm, "type": "text", "text": t_dm.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
+                        save_json_file(DM_DB, fresh_dms)
+                        st.rerun()
+            else: st.info("👥 ড্যাশবোর্ডে চ্যাট করার মতো কোনো সাধারণ মেম্বার পাওয়া যায়নি।")
 
     # --- TAB 4: PUBLIC ASAMI BOARD ---
     with engine_tab4:
         st.markdown("<h2 style='color:#EF4444;'>🚨 সাইবার থানা আসামি বোর্ড 🚓</h2>", unsafe_allow_html=True)
-        @st.fragment(run_every=2)
-        def render_live_asami_board():
-            current_asami = load_json_file(ASAMI_DB, {})
-            if current_asami:
-                for a_id, a_info in list(current_asami.items()):
-                    is_l, rem_t_str, _ = check_user_lock(a_id)
-                    if is_l:
-                        st.markdown(f"""
-                        <div class="asami-card">
-                            <h4 style="color:#FFF;">👤 আসামি: {load_json_file(USER_DB, {}).get(a_id, {}).get('name', a_id)}</h4>
-                            <p style="color:#FFAAAA;">❌ <b>অপরাধ:</b> {a_info.get('crime')}</p>
-                            <p style="color:#38BDF8;">⏳ <b>মুক্তির বাকি:</b> <b style="color:#00FF66;">{rem_t_str}</b></p>
-                        </div>
-                        """, unsafe_allow_html=True)
-            else: st.info("🕊️ ড্যাশবোর্ডে এখন কোনো আসামি নেই!")
-        render_live_asami_board()
 
     # --- TAB 5: CEO SECRET CONTROL ROOM ---
     with engine_tab5:
         st.subheader("👑 Riad Bhai's Secret Control Room")
-        if is_ceo_active:
-            st.success("🔓 ফুল সিইও কন্ট্রোল অ্যাক্টিভেটেড!")
-            u_broadcast_msg = st.text_area("মেম্বারদের জন্য নতুন নোটিশ/আদেশ লিখুন:", value=config.get("ceo_broadcast_msg", ""))
-            if st.button("🚀 গ্লোবাল এলার্ট জারি করুন"):
-                config["ceo_broadcast_msg"] = u_broadcast_msg.strip()
-                save_json_file(CONFIG_FILE, config); st.success("🔥 নোটিফিকেশন লাইভ করা হয়েছে!"); time.sleep(0.3); st.rerun()
-        else: st.error("🔒 এই সেকশনটি শুধুমাত্র মেইন সিইও প্যানেল দিয়ে এক্সেস করা যাবে।")
 
-    # --- 🔄 WHOLE PAGE HIGH-SPEED SYNC ENGINE ---
-    @st.fragment(run_every=2)
-    def global_heartbeat_loop():
-        pass
-    global_heartbeat_loop()
-
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v59.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v60.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
