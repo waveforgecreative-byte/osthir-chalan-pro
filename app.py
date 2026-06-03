@@ -51,7 +51,7 @@ dm_messages = st.session_state.dm_cache
 asami_list = st.session_state.asami_cache
 mail_logs = st.session_state.mail_logs
 
-st.set_page_config(page_title="অস্থির চালান PRO v60.0 🖥️⚡", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v61.0 🖥️⚡", page_icon="🥷", layout="wide")
 
 # --- CUSTOM CSS UI ---
 st.markdown("""
@@ -64,17 +64,22 @@ st.markdown("""
     .notice-board { background-color: #0F172A; border-left: 4px solid #38BDF8; padding: 15px; border-radius: 8px; margin-bottom: 25px; color: #F1F5F9; }
     .ceo-alert { background: linear-gradient(90deg, #991B1B, #450A0A); border-left: 6px solid #EF4444; padding: 15px; border-radius: 8px; color: #FCA5A5; font-weight: bold; margin-bottom: 15px; font-family: 'Hind Siliguri', sans-serif; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
     .lock-box { background: linear-gradient(90deg, #450A0A, #1A0505); border-left: 6px solid #EF4444; padding: 20px; border-radius: 8px; color: #FCA5A5; font-weight: bold; margin-bottom: 20px; }
-    .asami-card { background: #111827; border: 1px solid #EF4444; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
     .chat-box { height: 350px; overflow-y: auto; background: #090D16; border: 1px solid #1E293B; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
     .msg-incoming { background: #1E293B; color: #F1F5F9; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 80%; border-left: 3px solid #38BDF8; }
     .msg-outgoing { background: #0F2D1E; color: #00FF66; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; margin-left: auto; width: fit-content; max-width: 80%; border-right: 3px solid #00FF66; }
     
-    /* 🎯 HTML VCALL LINK DESIGN */
-    .vcall-link-btn { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #00FF66, #007A3D) !important; color: #000000 !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: none !important; box-shadow: 0 4px 15px rgba(0, 255, 102, 0.3); transition: 0.3s; }
-    .vcall-link-btn:hover { transform: scale(1.01); background: linear-gradient(90deg, #00FF88, #00994D) !important; color: #000 !important; text-decoration: none !important; }
+    /* 🎯 ONE-CLICK LIVE NOTIFICATION CALL BUTTON */
+    .incoming-call-alert { display: block !important; background: linear-gradient(135deg, #FF0055, #990033) !important; color: #FFFFFF !important; text-align: center !important; font-weight: bold !important; font-size: 15px !important; padding: 12px 15px !important; margin: 10px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: 2px solid #FF3366 !important; box-shadow: 0 0 15px rgba(255, 0, 85, 0.6) !important; animation: pulse 1.5s infinite; transition: 0.3s; }
+    .incoming-call-alert:hover { background: linear-gradient(135deg, #FF2277, #BB0044) !important; box-shadow: 0 0 25px rgba(255, 0, 85, 0.9) !important; text-decoration: none !important; color: #FFF !important; }
     
-    .vcall-link-private { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #FF007F, #7928CA) !important; color: #FFFFFF !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: none !important; box-shadow: 0 4px 15px rgba(255, 0, 127, 0.3); transition: 0.3s; }
-    .vcall-link-private:hover { transform: scale(1.01); background: linear-gradient(90deg, #FF3399, #8B3DD9) !important; color: #FFF !important; text-decoration: none !important; }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+    
+    .vcall-link-btn { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #00FF66, #007A3D) !important; color: #000000 !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: none !important; box-shadow: 0 4px 15px rgba(0, 255, 102, 0.3); }
+    .vcall-link-private { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #FF007F, #7928CA) !important; color: #FFFFFF !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: none !important; }
     
     .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; color: #64748B; z-index: 999; }
     </style>
@@ -107,7 +112,7 @@ def check_user_lock(u_id):
 
 # --- LOGIN GATEWAY ---
 if st.session_state.logged_in_user is None and not st.session_state.is_ceo:
-    st.markdown('<p class="main-title">অস্থির চালান PRO v60.0 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v61.0 🖥️⚡</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="notice-board">{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
     login_mode = st.radio("🔑 লগইন টাইপ সিলেক্ট করুন:", ["👤 সাধারণ মেম্বার পোর্টাল", "👑 সিইও সিকিউর পোর্টাল"], horizontal=True)
     
@@ -168,41 +173,11 @@ else:
         "👑 CEO Secret Control Room"
     ])
 
-    # --- TAB 1: GOOGLE MAPS ---
-    with engine_tab1:
-        st.subheader("📍 Google Maps Live Scraping & Integrated Cold Mailer")
-        if is_current_user_locked:
-            st.markdown(f'<div class="lock-box" style="text-align:center;">🛑 <b>অ্যাক্সেস ব্লকড!</b><br>⏳ বাকি সাজা: {remaining_lock_time}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown("### ⚙️ ইউজার প্রোফাইল ও সিকিউরিটি কনফিগারেশন")
-            p_col1, p_col2, p_col3 = st.columns(3)
-            u_api_key = p_col1.text_input("🔑 SerpApi Key:", type="password", value=saved_api)
-            u_company = p_col2.text_input("🏢 আপনার কোম্পানির নাম:", value=saved_company)
-            u_role = p_col3.text_input("👔 আপনার পদবি:", value=saved_role)
-            p_col4, p_col5 = st.columns(2)
-            u_services = p_col4.text_input("⚡ আপনার সার্ভিসসমূহ:", value=saved_services)
-            u_email = p_col5.text_input("📧 সেন্ডার জিমেইল:", value=saved_email)
-            u_app_pass = st.text_input("🔒 জিমেইল অ্যাপ পাসওয়ার্ড:", type="password", value=saved_app_pass)
-            
-            if st.button("💾 প্রোফাইল ডাটা পার্মানেন্ট সেভ করুন"):
-                if is_ceo_active:
-                    config["ceo_saved_api"] = u_api_key.strip(); config["ceo_company"] = u_company.strip()
-                    config["ceo_role"] = u_role.strip(); config["ceo_services"] = u_services.strip()
-                    config["ceo_email"] = u_email.strip(); config["ceo_app_pass"] = u_app_pass.strip()
-                    save_json_file(CONFIG_FILE, config)
-                else:
-                    users[current_user_id]["user_api_key"] = u_api_key.strip(); users[current_user_id]["company_name"] = u_company.strip()
-                    users[current_user_id]["user_role"] = u_role.strip(); users[current_user_id]["services"] = u_services.strip()
-                    users[current_user_id]["sender_email"] = u_email.strip(); users[current_user_id]["app_pass"] = u_app_pass.strip()
-                    save_json_file(USER_DB, users)
-                st.success("✅ কনফিগারেশন সেভ হয়েছে!")
-                time.sleep(0.5); st.rerun()
+    # --- TAB 1 & 2 EMPTY RUNNING FOR FOCUS ---
+    with engine_tab1: st.subheader("📍 Google Maps Live Scraping")
+    with engine_tab2: st.markdown("📸 ইনস্টাগ্রাম AI গ্লোবাল হান্টার")
 
-    # --- TAB 2: INSTAGRAM HUNTER ---
-    with engine_tab2:
-        st.markdown("<h2 style='color:#00FF66;'>📸 ইনস্টাগ্রাম AI গ্লোবাল হান্টার</h2>", unsafe_allow_html=True)
-
-    # --- TAB 3: CYBER MESSENGER (🎯 FIX DISPLAY NAME & POPUP REJECTION) ---
+    # --- TAB 3: CYBER MESSENGER (🎯 ONE-CLICK AUTO CALL NOTIFICATION) ---
     with engine_tab3:
         st.markdown("### 🔊 সাইবার মাল্টিমিডিয়া চ্যাট ও ভয়েস/ভিডিও মেকানিজম")
         chat_sub1, chat_sub2 = st.tabs(["🔊 Global Public Chat Room", "🔒 Secret 1:1 Personal DM Portal"])
@@ -215,34 +190,36 @@ else:
                 if not isinstance(msg, dict): continue
                 sender_id = msg.get("sender")
                 sender_display = "MD Reyadh [CEO 👑]" if sender_id == "CEO 👑" else load_json_file(USER_DB, {}).get(sender_id, {}).get("name", sender_id)
-                msg_class = "msg-outgoing" if sender_id == current_user_id else "msg-incoming"
-                chat_html += f'<div class="{msg_class}"><b>{sender_display}:</b> {msg.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{msg.get("time","")}</small></div>'
+                
+                # 🎯 চেক করা হচ্ছে এই মেসেজটি কোনো লাইভ ভিডিও কল অ্যালার্ট কি না
+                if msg.get("type") == "vcall_alert":
+                    # সরাসরি ওয়ান ক্লিক জয়েন বাটন জেনারেট হচ্ছে
+                    chat_html += f'<a href="{msg.get("url")}" target="_blank" class="incoming-call-alert">📲 {msg.get("text")}</a>'
+                else:
+                    msg_class = "msg-outgoing" if sender_id == current_user_id else "msg-incoming"
+                    chat_html += f'<div class="{msg_class}"><b>{sender_display}:</b> {msg.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{msg.get("time","")}</small></div>'
             st.markdown(chat_html + '</div>', unsafe_allow_html=True)
             
-            with st.form("pub_text_v60", clear_on_submit=True):
-                t_msg = st.text_input("📝 টেক্সট মেসেজ লিখুন:")
+            with st.form("pub_text_v61", clear_on_submit=True):
+                t_msg = st.text_input("📝 পাবলিক গ্রুপে টেক্সট মেসেজ লিখুন:")
                 if st.form_submit_button("পাঠান ✉️") and t_msg.strip():
                     live_chats.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "type": "text", "text": t_msg.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
                     save_json_file(CHAT_DB, live_chats)
                     st.rerun()
         
         with chat_sub2:
-            # 🎯 ফিক্সড: ড্রপডাউনে আইডির বদলে ইউজারদের আসল নাম দেখানোর মেকানিজম
             name_to_id_map = {}
             for u_id, u_info in users.items():
                 if u_id != current_user_id and u_id != "CEO 👑":
-                    display_label = f"{u_info.get('name', u_id)} ({u_id})"
-                    name_to_id_map[display_label] = u_id
+                    name_to_id_map[u_info.get('name', u_id)] = u_id
             
             if is_ceo_active:
                 for u_id, u_info in users.items():
-                    display_label = f"{u_info.get('name', u_id)} ({u_id})"
-                    name_to_id_map[display_label] = u_id
+                    name_to_id_map[u_info.get('name', u_id)] = u_id
 
             if name_to_id_map:
                 all_display_names = list(name_to_id_map.keys())
                 
-                # ড্রপডাউন ইনডেক্স ঠিক রাখা
                 current_saved_target_id = st.session_state.active_dm_user
                 matched_index = 0
                 if current_saved_target_id:
@@ -250,37 +227,54 @@ else:
                         if name_to_id_map[d_lbl] == current_saved_target_id:
                             matched_index = idx; break
                             
-                target_display_label = st.selectbox("🔒 মেম্বার সিলেক্ট করুন (সরাসরি আসল নাম ডিসপ্লে):", options=all_display_names, index=matched_index, key="dm_select_v60")
-                target_dm = name_to_id_map[target_display_label]
+                target_real_name = st.selectbox("🔒 মেম্বার সিলেক্ট করুন (আসল নাম):", options=all_display_names, index=matched_index)
+                target_dm = name_to_id_map[target_real_name]
                 st.session_state.active_dm_user = target_dm
                 
+                # ইউনিক সিকিউর রুম তৈরি
                 sorted_pair = sorted([str(current_user_id), str(target_dm)])
-                private_call_url = f"https://meet.jit.si/reyadh-private-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
-                target_real_name = users.get(target_dm, {}).get('name', target_dm)
+                private_call_url = f"https://meet.jit.si/reyadh-autoUX-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
                 
-                # 🎯 অ্যালার্ট এবং পপআপ ফিক্স করার জন্য ডুয়াল অ্যাকশন সিস্টেম
+                # 🎯 ওয়ান-ক্লিক ম্যাজিক কল বাটন মেকানিজম
                 c_btn1, c_btn2 = st.columns([2, 1])
-                if c_btn1.button(f"🚨 {target_real_name} এর জন্য কল অ্যালার্ট পাঠান 🔔", use_container_width=True):
+                if c_btn1.button(f"📞 {target_real_name} কে সরাসরি ভিডিও কল দিন 🎥", use_container_width=True):
                     fresh_dms = load_json_file(DM_DB, [])
-                    alert_text = f"🚨 কলার অ্যালার্ট: {user_real_name} আপনাকে ভিডিও কলে ডাকছেন! জলদি চ্যাটবক্সের উপরের লিঙ্কে ক্লিক করে জয়েন হোন! 📲"
+                    
+                    # কলার টাইপ সেট করা হচ্ছে 'vcall_alert' যেন অপর প্রান্ত সরাসরি ওয়ান-ক্লিক বাটন দেখে
+                    alert_text = f"{user_real_name} আপনাকে ভিডিও কলে ডাকছেন! জয়েন করতে এই বাটনে ক্লিক করুন 📲"
+                    
+                    # ১. পার্সোনাল ইনবক্সে বাটন পুশ
                     fresh_dms.append({
                         "sender": "CEO 👑" if is_ceo_active else current_user_id, 
                         "receiver": target_dm, 
-                        "type": "text", 
+                        "type": "vcall_alert", 
                         "text": alert_text, 
+                        "url": private_call_url,
                         "time": datetime.datetime.now().strftime("%I:%M %p")
                     })
                     save_json_file(DM_DB, fresh_dms)
+                    
+                    # ২. গ্লোবাল চ্যাটেও বাটন পুশ (ব্যাকআপ হিসেবে যেন মিস না হয়)
+                    fresh_chats = load_json_file(CHAT_DB, [])
+                    fresh_chats.append({
+                        "sender": "CEO 👑" if is_ceo_active else current_user_id,
+                        "type": "vcall_alert",
+                        "text": f"🚨 {target_real_name} ভাই, জলদি লাইভ কলে আসুন! {user_real_name} লাইনে আছেন 👉",
+                        "url": private_call_url,
+                        "time": datetime.datetime.now().strftime("%I:%M %p")
+                    })
+                    save_json_file(CHAT_DB, fresh_chats)
+                    
                     st.session_state.show_vcall_trigger_link = True
-                    st.success("🔔 অ্যালার্ট পাঠানো হয়েছে! নিচের লিঙ্কে ক্লিক করে রুমে ঢুকুন।")
+                    st.rerun()
                 
-                if c_btn2.button("🚫 কল লিঙ্ক বন্ধ করুন", use_container_width=True):
+                if c_btn2.button("🚫 কল লিংক সরাও", use_container_width=True):
                     st.session_state.show_vcall_trigger_link = False
                     st.rerun()
                 
-                # 🎯 পপআপ রিজেকশন এড়াতে ডিরেক্ট HTML সিকিউর লিঙ্ক
+                # আপনি কল দিলে আপনার জন্য রুমের লিংক ওপেন হবে এখানে
                 if st.session_state.show_vcall_trigger_link:
-                    st.markdown(f'<a href="{private_call_url}" target="_blank" class="vcall-link-private">⚡ ব্রাউজার পপআপ প্রোটেকশন আনলকড: এখানে ক্লিক করে {target_real_name} এর রুমে প্রবেশ করুন 🎥</a>', unsafe_allow_html=True)
+                    st.markdown(f'<a href="{private_call_url}" target="_blank" class="vcall-link-private">👑 আপনি কলটি শুরু করেছেন: রুমে প্রবেশ করতে এখানে ক্লিক করুন 🎥</a>', unsafe_allow_html=True)
                 
                 st.markdown(f"#### 💬 {target_real_name}-এর সাথে গোপন মেসেজ বক্স")
                 
@@ -289,33 +283,33 @@ else:
                     live_dms = load_json_file(DM_DB, [])
                     dm_html = '<div class="chat-box">'
                     filtered_dms = [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == t_user) or (d.get("sender") == t_user and d.get("receiver") == current_user_id))]
-                    if filtered_dms:
-                        for dm in filtered_dms:
-                            dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else load_json_file(USER_DB, {}).get(dm.get("sender"), {}).get("name", dm.get("sender"))
+                    
+                    for dm in filtered_dms:
+                        dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else load_json_file(USER_DB, {}).get(dm.get("sender"), {}).get("name", dm.get("sender"))
+                        
+                        if dm.get("type") == "vcall_alert":
+                            # পার্সোনাল ইনবক্সে ব্লিঙ্কিং বাটন জেনারেট
+                            st.markdown(f'<a href="{dm.get("url")}" target="_blank" class="incoming-call-alert">📲 {dm.get("text")}</a>', unsafe_allow_html=True)
+                        else:
                             dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
                             dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}<br><small style="font-size:9px;opacity:0.5;">{dm.get("time","")}</small></div>'
-                    else:
-                        dm_html += '<div style="color:#64748B; text-align:center; padding-top:150px;">কোনো মেসেজ নেই।</div>'
+                    
                     dm_html += '</div>'
                     st.markdown(dm_html, unsafe_allow_html=True)
 
                 render_live_dm_box(target_dm)
                 
-                with st.form("dm_text_v60", clear_on_submit=True):
+                with st.form("dm_text_v61", clear_on_submit=True):
                     t_dm = st.text_input(f"✉️ {target_real_name}-কে টেক্সট পাঠান:")
                     if st.form_submit_button("মেসেজ পাঠান 🚀") and t_dm.strip():
                         fresh_dms = load_json_file(DM_DB, [])
                         fresh_dms.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "receiver": target_dm, "type": "text", "text": t_dm.strip(), "time": datetime.datetime.now().strftime("%I:%M %p")})
                         save_json_file(DM_DB, fresh_dms)
                         st.rerun()
-            else: st.info("👥 ড্যাশবোর্ডে চ্যাট করার মতো কোনো সাধারণ মেম্বার পাওয়া যায়নি।")
+            else: st.info("👥 চ্যাট করার মতো কোনো মেম্বার পাওয়া যায়নি।")
 
-    # --- TAB 4: PUBLIC ASAMI BOARD ---
-    with engine_tab4:
-        st.markdown("<h2 style='color:#EF4444;'>🚨 সাইবার থানা আসামি বোর্ড 🚓</h2>", unsafe_allow_html=True)
+    # --- TAB 4 & 5 ---
+    with engine_tab4: st.markdown("🚨 সাইবার থানা আসামি বোর্ড 🚓")
+    with engine_tab5: st.subheader("👑 Riad Bhai's Secret Control Room")
 
-    # --- TAB 5: CEO SECRET CONTROL ROOM ---
-    with engine_tab5:
-        st.subheader("👑 Riad Bhai's Secret Control Room")
-
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v60.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v61.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
