@@ -88,8 +88,12 @@ if "is_ceo" not in st.session_state: st.session_state.is_ceo = False
 if "current_leads" not in st.session_state: st.session_state.current_leads = []
 if "insta_query_saved" not in st.session_state: st.session_state.insta_query_saved = ""
 if "show_vcall_trigger_link" not in st.session_state: st.session_state.show_vcall_trigger_link = False
-if "last_checked_msg_count" not in st.session_state: st.session_state.last_checked_msg_count = 0
-if "last_checked_dm_count" not in st.session_state: st.session_state.last_checked_dm_count = 0
+
+# ডাটাবেজ ট্র্যাক উন্নত করার জন্য স্ট্যাটিক ইনিশিয়েলাইজেশন
+live_chats_init = load_json_file(CHAT_DB, [])
+live_dms_init = load_json_file(DM_DB, [])
+if "last_checked_msg_count" not in st.session_state: st.session_state.last_checked_msg_count = len(live_chats_init)
+if "last_checked_dm_count" not in st.session_state: st.session_state.last_checked_dm_count = len(live_dms_init)
 
 # একটিভ টোস্ট ট্র্যাকার (মেসেজে জাম্প করার জন্য)
 if "latest_unread_msg" not in st.session_state: st.session_state.latest_unread_msg = None
@@ -128,17 +132,19 @@ def background_live_engine():
     if not current_uid:
         return
 
+    force_ui_refresh = False
+
     # 1. চেক লাইভ মেসেজ নোটিফিকেশন টোস্ট
     live_chats = load_json_file(CHAT_DB, [])
     if len(live_chats) > st.session_state.last_checked_msg_count:
-        if st.session_state.last_checked_msg_count > 0:
-            last_msg = live_chats[-1]
-            if last_msg.get("sender") != current_uid and last_msg.get("type") != "vcall_alert":
-                s_id = last_msg.get("sender")
-                s_name = "MD Reyadh [CEO 👑]" if s_id == "CEO 👑" else load_json_file(USER_DB, {}).get(s_id, {}).get("name", s_id)
-                st.toast(f"💬 {s_name}: {last_msg.get('text', '')}", icon="📩")
-                # নোটিফিকেশন বারের জন্য মেসেজটি সেভ রাখা হলো
-                st.session_state.latest_unread_msg = {"sender": s_name, "text": last_msg.get('text', '')}
+        last_msg = live_chats[-1]
+        if last_msg.get("sender") != current_uid and last_msg.get("type") != "vcall_alert":
+            s_id = last_msg.get("sender")
+            s_name = "MD Reyadh [CEO 👑]" if s_id == "CEO 👑" else load_json_file(USER_DB, {}).get(s_id, {}).get("name", s_id)
+            st.toast(f"💬 {s_name}: {last_msg.get('text', '')}", icon="📩")
+            # নোটিফিকেশন বারের জন্য মেসেজটি সেভ রাখা হলো
+            st.session_state.latest_unread_msg = {"sender": s_name, "text": last_msg.get('text', '')}
+            force_ui_refresh = True
         st.session_state.last_checked_msg_count = len(live_chats)
 
     # 2. চেক ডিরেক্ট কল এবং ডিএম নোটিফিকেশন
@@ -158,14 +164,23 @@ def background_live_engine():
         trigger_call_popup(caller_name, latest_call.get("url"))
 
     if len(live_dms) > st.session_state.last_checked_dm_count:
-        if st.session_state.last_checked_dm_count > 0 and live_dms:
+        if live_dms:
             last_dm = live_dms[-1]
             if last_dm.get("receiver") == current_uid and last_dm.get("type") != "vcall_alert":
                 s_id = last_dm.get("sender")
                 s_name = "MD Reyadh [CEO 👑]" if s_id == "CEO 👑" else load_json_file(USER_DB, {}).get(s_id, {}).get("name", s_id)
                 st.toast(f"🔒 [Secret DM] {s_name}: {last_dm.get('text', '')}", icon="🤫")
                 st.session_state.latest_unread_msg = {"sender": f"[DM] {s_name}", "text": last_dm.get('text', '')}
+                force_ui_refresh = True
         st.session_state.last_checked_dm_count = len(live_dms)
+
+    # জাদুকরী রিয়েল-টাইম পুশ মেকানিজম: নতুন মেসেজ পেলেই সে মেইন উইন্ডো রিফ্রেশ ট্রিগার করবে
+    if force_ui_refresh:
+        st.markdown("""
+            <script>
+                window.parent.document.querySelector('.stApp').click();
+            </script>
+        """, unsafe_allow_html=True)
 
 # ব্যাকগ্রাউন্ড ইঞ্জিন রান করা হলো
 background_live_engine()
@@ -315,18 +330,25 @@ else:
         saved_email = config.get("ceo_email", "") if is_ceo_active else users.get(current_user_id, {}).get("sender_email", "")
         saved_app_pass = config.get("ceo_app_pass", "") if is_ceo_active else users.get(current_user_id, {}).get("app_pass", "")
 
-        # ডায়নামিক ট্যাব সিলেকশন লজিক যাতে মেসেজ নোটিফিকেশনে ক্লিক করলে সরাসরি ৩ নম্বর ট্যাবে চলে আসে
-        engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5, engine_tab6 = st.tabs([
+        # ডায়নামিক ট্যাব সিলেকশন মেকানিজম
+        all_tabs = [
             "📍 Google Maps Scraper & Cold Mail Engine", 
             "📸 Instagram AI Global Hunter", 
             "💬 Cyber Messenger & Media Room",
             "🚨 CEO Complaint Box", 
             "🚨 পাবলিক আসামি থানা বোর্ড",
             "👑 CEO Secret Control Room"
-        ])
+        ]
+        
+        # জাস্ট ইউজার ফ্রেন্ডলি ট্যাব ট্র্যাকিং
+        tab_selection = st.radio("🗂️ নেভিগেশন মেনু:", all_tabs, index=st.session_state.active_tab_index, horizontal=True)
+        # ইন্টারনাল ইনডেক্স সিঙ্ক
+        st.session_state.active_tab_index = all_tabs.index(tab_selection)
+
+        st.markdown("---")
 
         # --- TAB 1: GOOGLE MAPS & COLD MAILER ---
-        with engine_tab1:
+        if tab_selection == "📍 Google Maps Scraper & Cold Mail Engine":
             st.subheader("📍 Google Maps Live Scraping & Integrated Cold Mailer")
             p_col1, p_col2, p_col3 = st.columns(3)
             u_api_key = p_col1.text_input("🔑 SerpApi Key:", type="password", value=saved_api)
@@ -383,7 +405,7 @@ else:
                 st.markdown("### ✉️ AI চালিত বাল্ক কোল্ড মেইলিং সিস্টেম")
                 email_subject = st.text_input("📝 মেইলের সাবজেক্ট (Subject):", value=f"Proposal from {u_company if u_company else 'Our Agency'}")
                 raw_leads_emails = st.text_area("📧 টার্গেটেড ক্লায়েন্ট ইমেইল লিস্ট (কমা দিয়ে আলাদা করুন):")
-                email_body = st.text_area("📄 ইমেইল বডি কাস্টমাইজ করুন:", value=f"Hello,\nI am {u_role} from {u_company}...", height=150)
+                email_body = st.text_area("📄 ইমেইল بডি কাস্টমাইজ করুন:", value=f"Hello,\nI am {u_role} from {u_company}...", height=150)
                 
                 if st.button("⚡ Automated Cold Mail Fayer"):
                     email_list = [e.strip() for e in raw_leads_emails.replace("\n", ",").split(",") if e.strip()]
@@ -398,7 +420,7 @@ else:
                         st.success("🚀 মিশন সাকসেসফুল! মেইল পাঠানো শেষ।")
 
         # --- TAB 2: INSTAGRAM HUNTER ---
-        with engine_tab2:
+        elif tab_selection == "📸 Instagram AI Global Hunter":
             st.markdown("<h2 style='color:#00FF66;'>📸 ইনস্টাগ্রাম AI গ্লোবাম হান্টার</h2>", unsafe_allow_html=True)
             insta_keyword = st.text_input("🔍 টার্গেটেড ইনস্টাগ্রাম হ্যাশট্যাগ বা নিশ দিন:", value=st.session_state.insta_query_saved)
             if st.button("🎯 ইনস্টাগ্রাম ইনফ্লুয়েন্সার ও বিজনেস ক্লায়েন্ট এক্সপ্লোর করুন"):
@@ -412,7 +434,7 @@ else:
                     st.success("🦜 পাখি খাঁচা ভেঙে ডাটা নিয়ে এসেছে!")
 
         # --- TAB 3: CYBER MESSENGER & MEDIA ---
-        with engine_tab3:
+        elif tab_selection == "💬 Cyber Messenger & Media Room":
             st.markdown("### 🔊 সাইবার মাল্টিমিডিয়া চ্যাট ও ভয়েস/ভিডিও মেকানিজম")
             chat_sub1, chat_sub2 = st.tabs(["🔊 Global Public Chat Room", "🔒 Secret 1:1 Personal DM Portal"])
             
@@ -489,8 +511,8 @@ else:
                             save_json_file(DM_DB, live_dms); st.rerun()
 
         # --- TAB 4: GLOBAL COMPLAINT BOX ---
-        with engine_tab4:
-            st.markdown("### 🚨 সিইও রিয়াদ ভাই বরাবর মেম্বার কমপ্লেইন্ট باکس")
+        elif tab_selection == "🚨 CEO Complaint Box":
+            st.markdown("### 🚨 সিইও রিয়াদ ভাই বরাবর মেম্বার কমপ্লেইন্ট বক্স")
             st.info("ড্যাশবোর্ডে কাজ করতে গিয়ে যেকোনো কারিগরি সমস্যা ফেস করলে এখানে রিপোর্ট করুন।")
             with st.form("global_complaint_form", clear_on_submit=True):
                 g_comp_subject = st.text_input("🎯 কমপ্লেইন্ট সাবজেক্ট:")
@@ -507,7 +529,7 @@ else:
                     else: st.error("❌ সব তথ্য পূরণ করুন!")
 
         # --- TAB 5: PUBLIC ASAMI BOARD ---
-        with engine_tab5:
+        elif tab_selection == "🚨 পাবলিক আসামি থানা বোর্ড":
             st.markdown("### 🚨 খাঁচার ভেতর অচিন পাখি থানা বোর্ড")
             current_asami = load_json_file(ASAMI_DB, {})
             if current_asami:
@@ -523,7 +545,7 @@ else:
             else: st.info("🕊️ বর্তমানে কোনো মেম্বার খাঁচায় বন্দী নেই। সবাই স্বাধীন!")
 
         # --- TAB 6: CEO SECRET CONTROL ROOM ---
-        with engine_tab6:
+        elif tab_selection == "👑 CEO Secret Control Room":
             if not is_ceo_active:
                 st.error("🚫 এই রুমের চাবি শুধু সিইও রিয়াদ ভাইয়ের পকেটে! আপনার অ্যাক্সেস নেই।")
             else:
