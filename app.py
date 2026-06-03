@@ -77,6 +77,9 @@ st.markdown("""
     .vcall-link-btn { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #00FF66, #007A3D) !important; color: #000000 !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; }
     .vcall-link-private { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #FF007F, #7928CA) !important; color: #FFFFFF !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; }
     .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; color: #64748B; z-index: 999; }
+    
+    /* Instant Message Notification Styling */
+    .msg-noti-bar { background: linear-gradient(90deg, #10B981, #059669); color: white; padding: 10px 15px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -87,6 +90,11 @@ if "insta_query_saved" not in st.session_state: st.session_state.insta_query_sav
 if "show_vcall_trigger_link" not in st.session_state: st.session_state.show_vcall_trigger_link = False
 if "last_checked_msg_count" not in st.session_state: st.session_state.last_checked_msg_count = 0
 if "last_checked_dm_count" not in st.session_state: st.session_state.last_checked_dm_count = 0
+
+# একটিভ টোস্ট ট্র্যাকার (মেসেজে জাম্প করার জন্য)
+if "latest_unread_msg" not in st.session_state: st.session_state.latest_unread_msg = None
+# কোন ট্যাব একটিভ থাকবে তার ট্র্যাকিং
+if "active_tab_index" not in st.session_state: st.session_state.active_tab_index = 0
 
 # --- LIVE LOCKUP TRACKER & CHECKER ---
 def check_user_lock(u_id):
@@ -107,6 +115,8 @@ def check_user_lock(u_id):
 def trigger_call_popup(sender_name, call_url):
     st.markdown(f"### 👑 **{sender_name}** আপনাকে সরাসরি লাইভ ভিডিও কলে ডাকছেন!")
     st.markdown("দেরি না করে নিচের বাটনে ক্লিক করে সরাসরি লাইভ ডিসকাশন রুমে জয়েন করুন।")
+    
+    # ওয়ান-ক্লিক জয়েন মেকানিজম (সরাসরি ক্লিক করলেই লিংকে চলে যাবে)
     st.link_button("🟢 রিসিভ করে কলে জয়েন করুন", call_url, use_container_width=True)
     if st.button("বন্ধ করুন ❌", use_container_width=True):
         st.rerun()
@@ -127,6 +137,8 @@ def background_live_engine():
                 s_id = last_msg.get("sender")
                 s_name = "MD Reyadh [CEO 👑]" if s_id == "CEO 👑" else load_json_file(USER_DB, {}).get(s_id, {}).get("name", s_id)
                 st.toast(f"💬 {s_name}: {last_msg.get('text', '')}", icon="📩")
+                # নোটিফিকেশন বারের জন্য মেসেজটি সেভ রাখা হলো
+                st.session_state.latest_unread_msg = {"sender": s_name, "text": last_msg.get('text', '')}
         st.session_state.last_checked_msg_count = len(live_chats)
 
     # 2. চেক ডিরেক্ট কল এবং ডিএম নোটিফিকেশন
@@ -152,6 +164,7 @@ def background_live_engine():
                 s_id = last_dm.get("sender")
                 s_name = "MD Reyadh [CEO 👑]" if s_id == "CEO 👑" else load_json_file(USER_DB, {}).get(s_id, {}).get("name", s_id)
                 st.toast(f"🔒 [Secret DM] {s_name}: {last_dm.get('text', '')}", icon="🤫")
+                st.session_state.latest_unread_msg = {"sender": f"[DM] {s_name}", "text": last_dm.get('text', '')}
         st.session_state.last_checked_dm_count = len(live_dms)
 
 # ব্যাকগ্রাউন্ড ইঞ্জিন রান করা হলো
@@ -208,6 +221,19 @@ else:
     c1, c2 = st.columns([6, 1])
     c1.markdown(f'**ACTIVE NODE:** {current_user_id.upper()}')
     if c2.button("লগআউট 🚪"): st.session_state.logged_in_user = None; st.session_state.is_ceo = False; st.rerun()
+
+    # --- ✉️ INSTANT NOTIFICATION INTERACTION BAR ---
+    # মেসেজ টোস্টে ক্লিক করা যায় না বলে এই ইন্টারঅ্যাক্টিভ বারটি টপ-এ দেখাবে, ক্লিক করলেই চ্যাট বক্সে নিয়ে যাবে।
+    if st.session_state.latest_unread_msg:
+        noti_data = st.session_state.latest_unread_msg
+        c_not1, c_not2 = st.columns([5, 1])
+        with c_not1:
+            st.markdown(f'<div class="msg-noti-bar">📩 নতুন মেসেজ এসেছে! <b>{noti_data["sender"]}:</b> {noti_data["text"]}</div>', unsafe_allow_html=True)
+        with c_not2:
+            if st.button("💬 চ্যাট বক্সে যান", use_container_width=True):
+                st.session_state.active_tab_index = 2 # চ্যাট ট্যাবের ইনডেক্স
+                st.session_state.latest_unread_msg = None # নোটিফিকেশন ক্লিয়ার করা হলো
+                st.rerun()
 
     # --- 🔒 কন্ডিশনাল ড্যাশবোর্ড লোডিং (যদি ইউজার লকড থাকে) ---
     if is_current_user_locked and not is_ceo_active:
@@ -289,6 +315,7 @@ else:
         saved_email = config.get("ceo_email", "") if is_ceo_active else users.get(current_user_id, {}).get("sender_email", "")
         saved_app_pass = config.get("ceo_app_pass", "") if is_ceo_active else users.get(current_user_id, {}).get("app_pass", "")
 
+        # ডায়নামিক ট্যাব সিলেকশন লজিক যাতে মেসেজ নোটিফিকেশনে ক্লিক করলে সরাসরি ৩ নম্বর ট্যাবে চলে আসে
         engine_tab1, engine_tab2, engine_tab3, engine_tab4, engine_tab5, engine_tab6 = st.tabs([
             "📍 Google Maps Scraper & Cold Mail Engine", 
             "📸 Instagram AI Global Hunter", 
@@ -423,6 +450,8 @@ else:
                     private_call_url = f"https://meet.jit.si/reyadh-autoUX-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
                     
                     c_btn1, c_btn2 = st.columns([2, 1])
+                    
+                    # ইনস্ট্যান্ট কল ডায়াল উইথ অটো-ডিরেকশন মেকানিজম
                     if c_btn1.button(f"📞 {target_real_name} কে সরাসরি ভিডিও কল দিন 🎥", use_container_width=True):
                         fresh_dms = load_json_file(DM_DB, [])
                         alert_text = f"{user_real_name} আপনাকে ভিডিও কলে ডাকছেন! জয়েন করতে এই বাটনে ক্লিক করুন 📲"
@@ -434,6 +463,9 @@ else:
                         fresh_chats = load_json_file(CHAT_DB, [])
                         fresh_chats.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "type": "vcall_alert", "text": f"🚨 {target_real_name} ভাই, জলদি লাইভ কলে আসুন! {user_real_name} লাইনে আছেন 👉", "url": private_call_url})
                         save_json_file(CHAT_DB, fresh_chats)
+                        
+                        # কল বাটন পুশ করা মাত্র কলারের স্ক্রিনও স্বয়ংক্রিয়ভাবে লাইভ জিটসি লিংকে ওপেন হবে
+                        st.markdown(f'<meta http-equiv="refresh" content="0; url={private_call_url}">', unsafe_allow_html=True)
                         st.session_state.show_vcall_trigger_link = True; st.rerun()
                     
                     if c_btn2.button("🚫 কল লিংক সরাও"): st.session_state.show_vcall_trigger_link = False; st.rerun()
@@ -458,7 +490,7 @@ else:
 
         # --- TAB 4: GLOBAL COMPLAINT BOX ---
         with engine_tab4:
-            st.markdown("### 🚨 সিইও রিয়াদ ভাই বরাবর মেম্বার কমপ্লেইন্ট বক্স")
+            st.markdown("### 🚨 সিইও রিয়াদ ভাই বরাবর মেম্বার কমপ্লেইন্ট باکس")
             st.info("ড্যাশবোর্ডে কাজ করতে গিয়ে যেকোনো কারিগরি সমস্যা ফেস করলে এখানে রিপোর্ট করুন।")
             with st.form("global_complaint_form", clear_on_submit=True):
                 g_comp_subject = st.text_input("🎯 কমপ্লেইন্ট সাবজেক্ট:")
