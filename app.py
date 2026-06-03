@@ -54,7 +54,12 @@ asami_list = st.session_state.asami_cache
 mail_logs = st.session_state.mail_logs
 complaints_list = st.session_state.complaints
 
-st.set_page_config(page_title="অস্থির চালান PRO v64.1 🖥️⚡", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v64.2 🖥️⚡", page_icon="🥷", layout="wide")
+
+# --- 🔄 LIVE SYNC ENGINE (AUTO-REFRESHER) ---
+# চ্যাট এবং ভিডিও কল লাইভ করার জন্য প্রতি ১ সেকেন্ড পর পর স্ট্রীমলিট অ্যাপ অটো-রিফ্রেশ হবে
+from streamlit_autorefresh import st_autorefresh
+st_autorefresh(interval=1000, limit=100000, key="live_sync_counter")
 
 # --- CUSTOM CSS UI ---
 st.markdown("""
@@ -76,7 +81,7 @@ st.markdown("""
     .msg-incoming { background: #1E293B; color: #F1F5F9; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 80%; border-left: 3px solid #38BDF8; }
     .msg-outgoing { background: #0F2D1E; color: #00FF66; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; margin-left: auto; width: fit-content; max-width: 80%; border-right: 3px solid #00FF66; }
     
-    .incoming-call-alert { display: block !important; background: linear-gradient(135deg, #FF0055, #990033) !important; color: #FFFFFF !important; text-align: center !important; font-weight: bold !important; font-size: 15px !important; padding: 14px 15px !important; margin: 10px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: 2px solid #FF3366 !important; box-shadow: 0 0 15px rgba(255, 0, 85, 0.6) !important; animation: pulse 1.5s infinite; }
+    .incoming-call-alert { display: block !important; background: linear-gradient(135deg, #FF0055, #990033) !important; color: #FFFFFF !important; text-align: center !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 15px !important; margin: 10px 0px !important; border-radius: 8px !important; text-decoration: none !important; border: 2px solid #FF3366 !important; box-shadow: 0 0 20px rgba(255, 0, 85, 0.8) !important; animation: pulse 1s infinite; }
     .vcall-link-btn { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #00FF66, #007A3D) !important; color: #000000 !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; }
     .vcall-link-private { display: block !important; width: 100% !important; text-align: center !important; background: linear-gradient(90deg, #FF007F, #7928CA) !important; color: #FFFFFF !important; font-weight: bold !important; font-size: 16px !important; padding: 14px 20px !important; margin: 10px 0px 20px 0px !important; border-radius: 8px !important; text-decoration: none !important; }
     .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; color: #64748B; z-index: 999; }
@@ -87,7 +92,6 @@ if "logged_in_user" not in st.session_state: st.session_state.logged_in_user = N
 if "is_ceo" not in st.session_state: st.session_state.is_ceo = False
 if "current_leads" not in st.session_state: st.session_state.current_leads = []
 if "insta_query_saved" not in st.session_state: st.session_state.insta_query_saved = ""
-if "active_dm_user" not in st.session_state: st.session_state.active_dm_user = None
 if "show_vcall_trigger_link" not in st.session_state: st.session_state.show_vcall_trigger_link = False
 
 # --- LIVE LOCKUP TRACKER & CHECKER ---
@@ -106,7 +110,7 @@ def check_user_lock(u_id):
 
 # --- LOGIN GATEWAY ---
 if st.session_state.logged_in_user is None and not st.session_state.is_ceo:
-    st.markdown('<p class="main-title">অস্থির চালান PRO v64.1 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v64.2 🖥️⚡</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="notice-board">{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
     login_mode = st.radio("🔑 লগইন টাইপ সিলেক্ট করুন:", ["👤 সাধারণ মেম্বার পোর্টাল", "👑 সিইও সিকিউর পোর্টাল"], horizontal=True)
     
@@ -168,10 +172,11 @@ else:
         </div>
         """, unsafe_allow_html=True)
         
-        lock_tab1, lock_tab2 = st.tabs(["💬 Cyber Messenger Room", "🚨 CEO Appeal Box"]) # শুধুমাত্র লকড মেম্বারদের জন্য 'Appeal Box'
+        # লকড ইউজারের জন্য চ্যাটরুম, স্পেশাল ডিএম এবং আপিল বক্স ট্যাব
+        lock_tab1, lock_tab2, lock_tab3 = st.tabs(["💬 Cyber Public Room", "🔒 Secret 1:1 DM (Riad Bhai)", "🚨 CEO Appeal Box"])
         
         with lock_tab1:
-            st.subheader("💬 সাইবার চ্যাট ও ইমার্জেন্সি কল পোর্টাল")
+            st.subheader("🔊 সাইবার গ্লোবাল পাবলিক চ্যাট রুম")
             live_chats = load_json_file(CHAT_DB, [])
             chat_html = '<div class="chat-box">'
             for msg in live_chats:
@@ -192,6 +197,35 @@ else:
                     save_json_file(CHAT_DB, live_chats); st.rerun()
 
         with lock_tab2:
+            st.subheader("🔒 সিইও রিয়াদ ভাইয়ের সাথে ১:১ সিক্রেট ডিরেক্ট মেসেজ বক্স")
+            st.warning("🔒 আপনি লকড থাকা অবস্থাতেও রিয়াদ ভাইয়ের সাথে সরাসরি পার্সোনাল চ্যাট বা কল রিসিভ করতে পারবেন।")
+            
+            sorted_pair = sorted([str(current_user_id), "CEO 👑"])
+            private_call_url = f"https://meet.jit.si/reyadh-autoUX-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
+            
+            # লাইভ ডিএম ও ইনকামিং কল চেক
+            live_dms = load_json_file(DM_DB, [])
+            
+            # রিয়াদ ভাই কল দিলে ইনকামিং কল বাটন ফ্ল্যাশ হবে
+            for dm in live_dms:
+                if isinstance(dm, dict) and dm.get("receiver") == current_user_id and dm.get("type") == "vcall_alert":
+                    st.markdown(f'<a href="{dm.get("url")}" target="_blank" class="incoming-call-alert">📲 {dm.get("text")}</a>', unsafe_allow_html=True)
+            
+            dm_html = '<div class="chat-box">'
+            filtered_dms = [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == "CEO 👑") or (d.get("sender") == "CEO 👑" and d.get("receiver") == current_user_id))]
+            for dm in filtered_dms:
+                dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else user_real_name
+                dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
+                dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}</div>'
+            st.markdown(dm_html + '</div>', unsafe_allow_html=True)
+            
+            with st.form("lock_dm_send", clear_on_submit=True):
+                t_lock_dm = st.text_input("✉️ রিয়াদ ভাইকে মেসেজ পাঠান:")
+                if st.form_submit_button("মেসেজ পাঠান 🚀") and t_lock_dm.strip():
+                    live_dms.append({"sender": current_user_id, "receiver": "CEO 👑", "type": "text", "text": t_lock_dm.strip()})
+                    save_json_file(DM_DB, live_dms); st.rerun()
+
+        with lock_tab3:
             st.markdown("### 🚨 সিইও রিয়াদ ভাই বরাবর স্পেশাল আপিল উইন্ডো")
             st.info("আপনার জরিমানা পরিশোধের বিকাশ ট্রানজেকশন আইডি অথবা ক্ষমা চাওয়ার মেইল সরাসরি সিইও রিয়াদ ভাইয়ের প্যানেলে চলে যাবে।")
             with st.form("complaint_form_locked", clear_on_submit=True):
@@ -344,6 +378,7 @@ else:
                         save_json_file(CHAT_DB, live_chats); st.rerun()
             
             with chat_sub2:
+                # রিয়াদ ভাইয়ের ডিএম স্ক্রিনে লকড ইউজারদেরও শো করার জন্য সম্পূর্ণ ডাটাবেস ম্যাপিং
                 name_to_id_map = {u_info.get('name', u_id): u_id for u_id, u_info in users.items() if u_id != current_user_id and u_id != "CEO 👑"}
                 if is_ceo_active: name_to_id_map = {u_info.get('name', u_id): u_id for u_id, u_info in users.items()}
                 
@@ -359,6 +394,9 @@ else:
                     if c_btn1.button(f"📞 {target_real_name} কে সরাসরি ভিডিও কল দিন 🎥", use_container_width=True):
                         fresh_dms = load_json_file(DM_DB, [])
                         alert_text = f"{user_real_name} আপনাকে ভিডিও কলে ডাকছেন! জয়েন করতে এই বাটনে ক্লিক করুন 📲"
+                        
+                        # আগের পুরোনো কলের অ্যালার্ট রিমুভ করে ফ্রেশ কল পুশ
+                        fresh_dms = [d for d in fresh_dms if not (d.get("receiver") == target_dm and d.get("type") == "vcall_alert")]
                         fresh_dms.append({"sender": "CEO 👑" if is_ceo_active else current_user_id, "receiver": target_dm, "type": "vcall_alert", "text": alert_text, "url": private_call_url})
                         save_json_file(DM_DB, fresh_dms)
                         
@@ -376,9 +414,10 @@ else:
                     dm_html = '<div class="chat-box">'
                     filtered_dms = [d for d in live_dms if isinstance(d, dict) and ((d.get("sender") == current_user_id and d.get("receiver") == target_dm) or (d.get("sender") == target_dm and d.get("receiver") == current_user_id))]
                     for dm in filtered_dms:
-                        dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else load_json_file(USER_DB, {}).get(dm.get("sender"), {}).get("name", dm.get("sender"))
-                        dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
-                        dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}</div>'
+                        if dm.get("type") != "vcall_alert":
+                            dm_sender_name = "MD Reyadh [CEO 👑]" if dm.get("sender") == "CEO 👑" else load_json_file(USER_DB, {}).get(dm.get("sender"), {}).get("name", dm.get("sender"))
+                            dm_class = "msg-outgoing" if dm.get("sender") == current_user_id else "msg-incoming"
+                            dm_html += f'<div class="{dm_class}"><b>{dm_sender_name}:</b> {dm.get("text","")}</div>'
                     st.markdown(dm_html + '</div>', unsafe_allow_html=True)
                     
                     with st.form("dm_send_main", clear_on_submit=True):
@@ -466,4 +505,4 @@ else:
                             del current_asami[asami_select]; save_json_file(ASAMI_DB, current_asami)
                             st.success("✅ মেম্বার আনব্যানড!"); st.rerun()
 
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v64.1 PRO Criminal Lockdown | Developed by MD Reyadh</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v64.2 PRO Live-Sync | Developed by MD Reyadh</div>', unsafe_allow_html=True)
