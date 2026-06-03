@@ -51,7 +51,7 @@ dm_messages = st.session_state.dm_cache
 asami_list = st.session_state.asami_cache
 mail_logs = st.session_state.mail_logs
 
-st.set_page_config(page_title="অস্থির চালান PRO v58.0 🖥️⚡", page_icon="🥷", layout="wide")
+st.set_page_config(page_title="অস্থির চালান PRO v59.0 🖥️⚡", page_icon="🥷", layout="wide")
 
 # --- CUSTOM CSS UI ---
 st.markdown("""
@@ -107,7 +107,7 @@ def check_user_lock(u_id):
 
 # --- LOGIN GATEWAY ---
 if st.session_state.logged_in_user is None and not st.session_state.is_ceo:
-    st.markdown('<p class="main-title">অস্থির চালান PRO v58.0 🖥️⚡</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">অস্থির চালান PRO v59.0 🖥️⚡</p>', unsafe_allow_html=True)
     st.markdown(f'<div class="notice-board">{config.get("notice_text", "")}</div>', unsafe_allow_html=True)
     login_mode = st.radio("🔑 লগইন টাইপ সিলেক্ট করুন:", ["👤 সাধারণ মেম্বার পোর্টাল", "👑 সিইও সিকিউর পোর্টাল"], horizontal=True)
     
@@ -247,7 +247,7 @@ else:
                 final_google_query = f'site:instagram.com "{st.session_state.insta_query_saved}"'
                 st.markdown(f'<a href="https://www.google.com/search?q={urllib.parse.quote(final_google_query)}" target="_blank"><button style="background-color:#4285F4; color:white; padding:12px; border:none; border-radius:8px; width:100%; cursor:pointer; font-weight:bold;">🎯 গুগল এক্স-রে ফিল্টারে হান্ট করুন</button></a>', unsafe_allow_html=True)
 
-    # --- TAB 3: CYBER MESSENGER (🎯 AUTOMATIC CALL ALERT DISPATCHER) ---
+    # --- TAB 3: CYBER MESSENGER (🎯 REAL-NAME CALL ALERT DISPATCHER) ---
     with engine_tab3:
         st.markdown("### 🔊 সাইবার মাল্টিমিডিয়া চ্যাট ও ভয়েস/ভিডিও মেকানিজম")
         
@@ -269,7 +269,7 @@ else:
 
         with chat_sub1:
             render_live_public_chat()
-            with st.form("pub_text_v58", clear_on_submit=True):
+            with st.form("pub_text_v59", clear_on_submit=True):
                 t_msg = st.text_input("📝 টেক্সট মেসেজ লিখুন:")
                 if st.form_submit_button("পাঠান ✉️") and t_msg.strip():
                     fresh_chats = load_json_file(CHAT_DB, [])
@@ -283,18 +283,21 @@ else:
                 
             if all_users_list:
                 default_index = all_users_list.index(st.session_state.active_dm_user) if st.session_state.active_dm_user in all_users_list else 0
-                target_dm = st.selectbox("🔒 মেম্বার সিলেক্ট করুন:", options=all_users_list, index=default_index, key="dm_select_v58")
+                target_dm = st.selectbox("🔒 মেম্বার সিলেক্ট করুন:", options=all_users_list, index=default_index, key="dm_select_v59")
                 
                 if target_dm:
                     st.session_state.active_dm_user = target_dm
                     sorted_pair = sorted([str(current_user_id), str(target_dm)])
                     private_call_url = f"https://meet.jit.si/reyadh-private-1to1-{sorted_pair[0]}-{sorted_pair[1]}"
                     
-                    # 🎯 ম্যাজিক বাটন: ক্লিক করলেই অটোমেটিক মেসেজ যাবে এবং কল ওপেন হবে!
-                    if st.button(f"📞 {users.get(target_dm, {}).get('name', target_dm)} কে সরাসরি ভিডিও কল দিন (অটো-অ্যালার্টসহ) 🎥", use_container_width=True):
-                        # ১. ব্যাকগ্রাউন্ডে ইনবক্সে রিয়েল-টাইম নোটিফিকেশন মেসেজ পুশ
+                    # 🎯 ফিক্সড: আসল নাম ধরে কলার অ্যালার্ট পুশ হবে
+                    target_display_name = users.get(target_dm, {}).get('name', target_dm)
+                    if st.button(f"📞 {target_display_name} কে সরাসরি ভিডিও কল দিন (অটো-নামসহ) 🎥", use_container_width=True):
                         fresh_dms = load_json_file(DM_DB, [])
+                        
+                        # এখানে কলার আইডি-র বদলে 'user_real_name' (আসল নাম) ডিরেক্ট বসিয়ে দেওয়া হয়েছে
                         alert_text = f"🚨 কলার অ্যালার্ট: {user_real_name} আপনাকে ভিডিও কলে ডাকছেন! জলদি চ্যাটবক্সের উপরের লিঙ্কে ক্লিক করে জয়েন হোন! 📲"
+                        
                         fresh_dms.append({
                             "sender": "CEO 👑" if is_ceo_active else current_user_id, 
                             "receiver": target_dm, 
@@ -304,16 +307,16 @@ else:
                         })
                         save_json_file(DM_DB, fresh_dms)
                         
-                        # ২. জাভাস্ক্রিপ্ট ইনজেকশন দিয়ে কোনো রিফ্রেশ ছাড়াই ইনস্ট্যান্ট নতুন ট্যাবে কল ওপেন
+                        # জাভাস্ক্রিপ্ট দিয়ে নতুন ট্যাবে কল ওপেন
                         js_trigger = f"""
                         <script>
                             window.open("{private_call_url}", "_blank");
                         </script>
                         """
                         st.components.v1.html(js_trigger, height=0)
-                        st.success("🚀 নোটিফিকেশন পাঠানো হয়েছে এবং কল উইন্ডো ওপেন হয়েছে!")
+                        st.success(f"🚀 {user_real_name} নামে নোটিফিকেশন পাঠানো হয়েছে এবং কল ওপেন হয়েছে!")
                     
-                    st.markdown(f"#### 💬 {users.get(target_dm, {}).get('name', target_dm)}-এর সাথে গোপন মেসেজ বক্স")
+                    st.markdown(f"#### 💬 {target_display_name}-এর সাথে গোপন মেসেজ বক্স")
                     
                     @st.fragment(run_every=1)
                     def render_live_dm_box(t_user):
@@ -332,8 +335,8 @@ else:
 
                     render_live_dm_box(target_dm)
                     
-                    with st.form("dm_text_v58", clear_on_submit=True):
-                        t_dm = st.text_input(f"✉️ {users.get(target_dm, {}).get('name', target_dm)}-কে টেক্সট পাঠান:")
+                    with st.form("dm_text_v59", clear_on_submit=True):
+                        t_dm = st.text_input(f"✉️ {target_display_name}-কে টেক্সট পাঠান:")
                         if st.form_submit_button("মেসেজ পাঠান 🚀"):
                             if t_dm.strip():
                                 fresh_dms = load_json_file(DM_DB, [])
@@ -378,4 +381,4 @@ else:
         pass
     global_heartbeat_loop()
 
-st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v58.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">অস্থির চালান ড্যাশবোর্ড v59.0 | Developed by MD Reyadh</div>', unsafe_allow_html=True)
