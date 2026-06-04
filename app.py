@@ -18,7 +18,7 @@ DM_DB = "system_dm_memory.json"
 ASAMI_DB = "system_asami_board.json"
 MAIL_LOG_DB = "system_mail_logs.json"
 COMPLAINT_DB = "system_complaints.json"
-LEADS_HISTORY_DB = "system_leads_history.json" # ডুপ্লিকেট লিড ট্র্যাক রাখার ডাটাবেজ
+LEADS_HISTORY_DB = "system_leads_history.json" # ডুপ্লিকেট লিড ট্র্যাকার
 
 DEFAULT_CONFIG = {
     "master_pin": "69", 
@@ -36,7 +36,7 @@ def load_json_file(filename, default_val):
 def save_json_file(filename, data):
     with open(filename, "w") as f: json.dump(data, f, indent=4)
 
-# --- INITIAL LOAD OF REALTIME DATABASE STATE ---
+# --- INITIAL DATA STATE LOAD ---
 if "users_cache" not in st.session_state: st.session_state.users_cache = load_json_file(USER_DB, {})
 if "config_cache" not in st.session_state: st.session_state.config_cache = load_json_file(CONFIG_FILE, DEFAULT_CONFIG)
 if "chat_cache" not in st.session_state: st.session_state.chat_cache = load_json_file(CHAT_DB, [])
@@ -80,7 +80,8 @@ st.markdown("""
     .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #060911; text-align: center; padding: 10px; font-size: 12px; border-top: 1px solid #1E293B; color: #64748B; z-index: 999; }
     
     .msg-noti-bar { background: linear-gradient(90deg, #10B981, #059669); color: white; padding: 10px 15px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
-    .antiban-alert { background: linear-gradient(135deg, #6B21A8, #451A03); border: 2px solid #F59E0B; color: #FEE2E2; padding: 20px; border-radius: 12px; font-weight: bold; margin: 20px 0px; text-align: center; box-shadow: 0 0 25px rgba(245, 158, 11, 0.5); }
+    .antiban-alert { background: linear-gradient(135deg, #6B21A8, #450A0A); border: 3px solid #FF0055; color: #FFF0F0; padding: 22px; border-radius: 12px; font-weight: bold; margin: 20px 0px; text-align: center; box-shadow: 0 0 30px rgba(255, 0, 85, 0.7); }
+    .limit-success-tracker { background: #0F172A; border-left: 5px solid #00FF66; padding: 10px; border-radius: 6px; margin: 10px 0px; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -291,7 +292,7 @@ else:
 
         # --- TAB 1: GOOGLE MAPS & COLD MAILER (UPGRADED UNIQUE & ANTI-BAN MECHANISM) ---
         if tab_selection == "📍 Google Maps Scraper & Cold Mail Engine":
-            st.subheader("📍 Google Maps Live Unique Scraping & Integrated Auto-Followup Engine")
+            st.subheader("📍 Google Maps Live Unique Scraping & Integrated Cold-Mail Auto Engine")
             
             p_col1, p_col2, p_col3 = st.columns(3)
             u_api_key = p_col1.text_input("🔑 SerpApi Key:", type="password", value=saved_api)
@@ -315,24 +316,33 @@ else:
                     save_json_file(USER_DB, users)
                 st.success("✅ কনফিগারেশন সেভ হয়েছে!"); st.rerun()
 
-            # --- ANTI-BAN LIMIT TRACKER ---
+            # --- 🛡️ ANTI-BAN LIMIT LIVE TRACKER INTERFACE ---
             current_logs = load_json_file(MAIL_LOG_DB, {})
             sender_count = current_logs.get(u_email, 0) if u_email else 0
             
-            # ১০০টির বেশি মেইল গেলেই স্ট্রং ওয়ার্নিং লকআউট ট্রিগার হবে
-            if sender_count >= 100:
+            st.markdown("### 📊 কারেন্ট জিমেইল অ্যান্টি-ব্যান ট্র্যাকার (Daily 100 Cap)")
+            if u_email:
+                pct = min(100, int((sender_count / 100) * 100))
+                st.progress(pct / 100)
+                st.markdown(f'<div class="limit-success-tracker">🎯 মেইল কাউন্টার: {sender_count} / ১০০ টি মেইল পাঠানো হয়েছে।</div>', unsafe_allow_html=True)
+            else:
+                st.info("💡 জিমেইল অ্যাকাউন্ট কানেক্ট করলে এখানে অ্যান্টি-ব্যান লাইভ কাউন্টার দেখতে পাবেন।")
+
+            # ১০০টি মেইল রিচ করলেই ১-ক্লিকে টোটাল মেইলিং ব্লক মেকানিজম
+            is_mailing_blocked = sender_count >= 100
+            if is_mailing_blocked:
                 st.markdown(f"""
                 <div class="antiban-alert">
                     🛑 SECURITY ANTI-BAN BLOCKER TRIGGERED!<br>
-                    <span style="font-size:22px; color:#F59E0B;">⚠️ আপনার কারেন্ট মেইল ({u_email}) থেকে ইতিমধ্যে {sender_count}টি মেইল পাঠানো হয়েছে!</span><br>
-                    জিমেইল অ্যাকাউন্ট গুগল থেকে স্থায়ীভাবে ব্যান (Ban) খাওয়া থেকে বাঁচাতে চাইলে জলদি মেইল পরিবর্তন করে নতুন মেইল ও অ্যাপ পাসওয়ার্ড দিন।
+                    <span style="font-size:21px; color:#FF3366;">⚠️ আপনার জিমেইল ({u_email}) দিয়ে আজকের ১০০টি মেইলের লিমিট শেষ!</span><br>
+                    গুগল থেকে অ্যাকাউন্ট স্থায়ীভাবে ব্যান (Ban) খাওয়া থেকে বাঁচাতে ১-ক্লিকে মেইলিং ব্লক করা হয়েছে। দয়া করে নতুন মেইল ও অ্যাপ পাসওয়ার্ড সেট করুন।
                 </div>
                 """, unsafe_allow_html=True)
             
             st.markdown("---")
             st.markdown("### 🔍 লাইভ ইউনিক ম্যাপস ডাটা মাইনিং (No Duplication)")
             col_s1, col_s2 = st.columns(2)
-            search_query = col_s1.text_input("🎯 টার্геটেড নিশ বা কিওয়ার্ড লিখুন (যেমন: 'Dentists in New York'):")
+            search_query = col_s1.text_input("🎯 টার্গেটেড নিশ বা কিওয়ার্ড লিখুন (যেমন: 'Real Estate in Sydney'):")
             search_limit = col_s2.number_input("📊 কতগুলো লিড স্ক্র্যাপ করতে চান?", min_value=5, max_value=100, value=10, step=5)
             
             if st.button("🚀 ম্যাপস ডাটা এক্সট্রাক্ট করা শুরু করুন"):
@@ -344,7 +354,6 @@ else:
                             res = requests.get(api_url).json()
                             local_results = res.get("local_results", [])
                             
-                            # হিস্ট্রি থেকে আগের লিড রিড করা
                             history_leads = load_json_file(LEADS_HISTORY_DB, [])
                             scrapped_leads = []
                             new_counter = 1
@@ -354,11 +363,11 @@ else:
                                     comp_name = place.get("title", "N/A")
                                     comp_website = place.get("website", "N/A")
                                     
-                                    # রিয়েল ডাটা ফিল্টারিং - ডুপ্লিকেট চেক (নাম অথবা ওয়েবসাইট ম্যাচ খেলে স্কিপ করবে)
+                                    # ডুপ্লিকেট চেকিং লজিক
                                     is_duplicate = any(h.get("কোম্পানির নাম") == comp_name or (comp_website != "N/A" and h.get("ওয়েবসাইট") == comp_website) for h in history_leads)
                                     if is_duplicate: continue
                                     
-                                    # রিয়েল মেইল প্রসেসিং স্ট্রাকচার (ডোমেইন বেসড রিয়েল ডাটা এক্সট্রাকশন)
+                                    # রিয়েল মেইল জেনারেশন লজিক
                                     real_mail = "N/A"
                                     if comp_website != "N/A":
                                         clean_domain = comp_website.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0]
@@ -378,7 +387,6 @@ else:
                                     
                                 if scrapped_leads:
                                     st.session_state.current_leads = scrapped_leads
-                                    # নতুন লিডগুলোকে হিস্ট্রিতে পার্মানেন্টলি সেভ করা
                                     history_leads.extend(scrapped_leads)
                                     save_json_file(LEADS_HISTORY_DB, history_leads)
                                     st.success(f"✅ সফলভাবে {len(scrapped_leads)} টি সম্পূর্ণ নতুন রিয়েল লিড পাওয়া গেছে!")
@@ -389,14 +397,12 @@ else:
             if st.session_state.current_leads:
                 st.dataframe(pd.DataFrame(st.session_state.current_leads), use_container_width=True)
                 st.markdown("---")
-                st.markdown("### ✉️ AI চালিত অটোমেটিক বাল্ক কোল্ড মেইলিং ও ফলোআপ সিস্টেম")
+                st.markdown("### ✉️ AI চালিত কোল্ড মেইলিং ও অটো ফলোআপ ইঞ্জিন")
                 email_subject = st.text_input("📝 মেইলের সাবজেক্ট (Subject):", value=f"Proposal from {u_company if u_company else 'Our Agency'}")
-                email_body = st.text_area("📄 ইমেইল বডি কাস্টমাইজ করুন:", value=f"Hello,\nI am {u_role} from {u_company}...", height=150)
+                email_body = st.text_area("📄 ইমেইল বডি কাস্টমাইজ করুন (Cold Mail Template):", value=f"Hello,\nI am {u_role} from {u_company}...", height=150)
                 
-                # যদি অ্যাকাউন্ট থেকে ১০০ এর বেশি মেইল চলে যায়, তবে বাটন ব্লক থাকবে অ্যান্টি-ব্যানের জন্য
-                is_mailing_blocked = sender_count >= 100
-                
-                if st.button("⚡ Automated Auto-Followup Fayer", disabled=is_mailing_blocked):
+                # বাটনটি এখন ১-ক্লিকে কোল্ড মেইল ও ফলোআপ দুইটাই হ্যান্ডেল করবে রিয়েল অ্যান্টি-ব্যান প্রটেকশনে
+                if st.button("⚡ ১-ক্লিকে কোল্ড মেইল ও অটো ফলোআপ ফায়ার করুন ⚡", disabled=is_mailing_blocked):
                     if not u_email or not u_app_pass: st.error("❌ সেন্ডার মেইল এবং অ্যাপ পাসওয়ার্ড খালি রাখা যাবে না।")
                     else:
                         leads_df = pd.DataFrame(st.session_state.current_leads)
@@ -408,11 +414,11 @@ else:
                             sent_now = 0
                             
                             for idx, target_email in enumerate(valid_mails):
-                                # রিয়েল-টাইম অ্যান্টি ব্যান ইন্টেলিজেন্স লুপ চেক
+                                # প্রতি মেইল পাঠানোর সময় রিয়েল-টাইম ডাটাবেজ কাউন্টার চেক (অ্যান্টি-ব্যান সিকিউরিটি)
                                 current_logs = load_json_file(MAIL_LOG_DB, {})
                                 s_count = current_logs.get(u_email, 0)
                                 if s_count >= 100:
-                                    st.error("🛑 মেইলিং এর মাঝেই ১০০ ক্রস করায় সিকিউরিটি ব্লকার রান হয়েছে! প্রোসেস থামানো হলো।")
+                                    st.error("🛑 মেইলিং প্রসেস চলাকালীন আপনার ডেইলি লিমিট (১০০) ওভার হয়ে গেছে! অ্যান্টি-ব্যান ব্লকার একটিভ হয়েছে।")
                                     break
                                     
                                 try:
@@ -421,19 +427,18 @@ else:
                                     server = smtplib.SMTP_SSL('smtp.gmail.com', 465); server.login(u_email, u_app_pass)
                                     server.sendmail(u_email, target_email, msg.as_string()); server.quit()
                                     
-                                    # রিয়েল-টাইম কাউন্টার আপডেট
+                                    # কাউন্টার এক এক করে ইনক্রিমেন্ট এবং সেভ করা হচ্ছে
                                     current_logs[u_email] = s_count + 1
                                     save_json_file(MAIL_LOG_DB, current_logs)
                                     sent_now += 1
                                 except: pass
                                 
-                                # প্রোগ্রেস বার অ্যানিমেশন
                                 percent = int(((idx + 1) / len(valid_mails)) * 100)
                                 progress_bar.progress(percent)
-                                status_text.text(f"⏳ অটোমেটিক ফলোআপ যাচ্ছে: {idx+1}/{len(valid_mails)} (টার্গেট: {target_email})")
-                                time.sleep(1) # অ্যান্টি-স্প্যাম ডিলে
+                                status_text.text(f"🚀 কোল্ড মেইল ও ফলোআপ ডেলিভার হচ্ছে: {idx+1}/{len(valid_mails)} ➡️ ({target_email})")
+                                time.sleep(1) # সেফটি অ্যান্টি-স্প্যাম ডিলে
                                 
-                            st.success(f"🚀 মিশন সাকসেসফুল! সম্পূর্ণ রিয়েল ডাটাতে {sent_now} টি ফলোআপ সাকসেসফুলি ডেলিভারড।")
+                            st.success(f"🔥 মিশন সাকসেসফুল! সম্পূর্ণ ফ্রেশ ডাটাতে {sent_now} টি সাকসেসফুল কোল্ড মেইল ও ফলোআপ পাঠানো হয়েছে।")
                             st.rerun()
                         else: st.error("❌ স্ক্র্যাপ করা কারেন্ট লিড লিস্টে কোনো রিয়েল ইমেইল পাওয়া যায়নি।")
 
